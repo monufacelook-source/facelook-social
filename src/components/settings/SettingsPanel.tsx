@@ -1,6 +1,8 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Lock, Eye, EyeOff, Globe, KeyRound, Shield } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff, Globe, KeyRound, Shield, LogOut } from "lucide-react";
 import { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 
 interface SettingsPanelProps {
   isOpen: boolean;
@@ -11,12 +13,20 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
   const [profileLocked, setProfileLocked] = useState(false);
   const [hideStatus, setHideStatus] = useState(false);
   const [lang, setLang] = useState<"en" | "hi">("en");
+  const { signOut } = useAuth();
+  const { toast } = useToast();
 
   const labels = {
-    en: { title: "Settings", password: "Reset Password", lock: "Profile Lock", status: "Hide Live Status", language: "Language" },
-    hi: { title: "सेटिंग्स", password: "पासवर्ड रीसेट", lock: "प्रोफ़ाइल लॉक", status: "लाइव स्टेटस छुपाएं", language: "भाषा" },
+    en: { title: "Settings", password: "Reset Password", lock: "Profile Lock", status: "Hide Live Status", language: "Language", signOut: "Sign Out" },
+    hi: { title: "सेटिंग्स", password: "पासवर्ड रीसेट", lock: "प्रोफ़ाइल लॉक", status: "लाइव स्टेटस छुपाएं", language: "भाषा", signOut: "साइन आउट" },
   };
   const t = labels[lang];
+
+  const handleSignOut = async () => {
+    await signOut();
+    toast({ title: "Signed out", description: "See you soon! 👋" });
+    onClose();
+  };
 
   return (
     <AnimatePresence>
@@ -97,6 +107,19 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                   ))}
                 </div>
               </div>
+
+              {/* Sign Out */}
+              <motion.button
+                onClick={handleSignOut}
+                data-testid="button-signout"
+                className="glass-card w-full p-4 flex items-center gap-4 text-left text-destructive hover:bg-destructive/10 transition-colors"
+                whileTap={{ scale: 0.98 }}
+              >
+                <div className="w-10 h-10 rounded-xl bg-destructive/10 flex items-center justify-center">
+                  <LogOut className="w-5 h-5 text-destructive" />
+                </div>
+                <span className="font-medium text-sm">{t.signOut}</span>
+              </motion.button>
             </div>
           </div>
         </motion.div>
