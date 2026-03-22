@@ -8,7 +8,7 @@ packages = ["psmisc"]
 
 [deployment]
 deploymentTarget = "autoscale"
-run = ["sh", "-c", "npm run dev -- --host 0.0.0.0 --port 3000"]
+run = ["sh", "-c", "npm run build && npx vite preview --host 0.0.0.0 --port 3000"]
 build = ["npm", "run", "build"]
 
 [workflows]
