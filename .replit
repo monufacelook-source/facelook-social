@@ -8,7 +8,7 @@ packages = ["psmisc"]
 
 [deployment]
 deploymentTarget = "autoscale"
-run = ["node", "./dist/index.cjs"]
+run = ["sh", "-c", "npm run dev -- --host 0.0.0.0 --port 3000"]
 build = ["npm", "run", "build"]
 
 [workflows]
@@ -39,8 +39,10 @@ waitForPort = 5000
 localPort = 3000
 
 [[ports]]
+localPort = 3001
+
+[[ports]]
 localPort = 5000
-externalPort = 80
 
 [[ports]]
 localPort = 5001
