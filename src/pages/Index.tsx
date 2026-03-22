@@ -9,6 +9,7 @@ import MainFeed from "@/components/feed/MainFeed";
 import HeartSection from "@/components/feed/HeartSection";
 import ProfileSection from "@/components/profile/ProfileSection";
 import SettingsPanel from "@/components/settings/SettingsPanel";
+import { useUnreadCount } from "@/hooks/useUnreadCount";
 
 type View = "feed" | "heart";
 
@@ -19,6 +20,7 @@ export default function Index() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [view, setView] = useState<View>("feed");
+  const unreadCount = useUnreadCount();
 
   return (
     <div className="h-screen w-screen bg-background overflow-hidden flex flex-col">
@@ -53,10 +55,24 @@ export default function Index() {
             </motion.button>
             <motion.button
               onClick={() => setChatOpen(true)}
-              className="glass px-3 py-1.5 rounded-full flex items-center gap-1.5 text-xs font-medium"
+              className="glass px-3 py-1.5 rounded-full flex items-center gap-1.5 text-xs font-medium relative"
               whileTap={{ scale: 0.92 }}
+              data-testid="button-open-chat"
             >
               <MessageSquare className="w-3.5 h-3.5 text-primary" />
+              {unreadCount > 0 && (
+                <motion.span
+                  key={unreadCount}
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  className="absolute -top-1 -right-1 min-w-[16px] h-4 rounded-full bg-red-500 flex items-center justify-center px-1"
+                  data-testid="badge-unread"
+                >
+                  <span className="text-[9px] text-white font-bold">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                </motion.span>
+              )}
             </motion.button>
           </div>
         </div>
