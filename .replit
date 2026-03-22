@@ -4,6 +4,7 @@ expertMode = true
 
 [nix]
 channel = "stable-25_05"
+packages = ["psmisc"]
 
 [deployment]
 deploymentTarget = "autoscale"
@@ -35,8 +36,14 @@ args = "npm run dev"
 waitForPort = 5000
 
 [[ports]]
+localPort = 3000
+
+[[ports]]
 localPort = 5000
 externalPort = 80
+
+[[ports]]
+localPort = 5001
 
 [userenv]
 
