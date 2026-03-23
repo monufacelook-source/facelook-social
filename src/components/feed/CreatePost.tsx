@@ -49,7 +49,7 @@ export default function CreatePost() {
       const ext = imageFile.name.split(".").pop();
       const path = `${user.id}/${Date.now()}.${ext}`;
       const { error: uploadError } = await supabase.storage
-        .from("POSTS")
+        .from("posts")
         .upload(path, imageFile, { upsert: false });
 
       if (uploadError) {
@@ -63,7 +63,7 @@ export default function CreatePost() {
       }
 
       const { data: urlData } = supabase.storage
-        .from("POSTS")
+        .from("posts")
         .getPublicUrl(path);
       image_url = urlData.publicUrl;
     }
