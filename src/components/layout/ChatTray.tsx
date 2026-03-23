@@ -1,5 +1,14 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Send, ArrowLeft, Loader2, CheckCheck } from "lucide-react";
+import {
+  X,
+  Send,
+  ArrowLeft,
+  Loader2,
+  CheckCheck,
+  Crown,
+  ShieldAlert,
+  Image as ImageIcon,
+} from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { supabase } from "@/lib/supabase";
@@ -20,6 +29,13 @@ function getOtherParticipantId(conv: any, myId: string) {
     ? conv.participant_2_id
     : conv.participant_1_id;
 }
+
+// --- 🛡️ NEW: Number Filter Logic ---
+const filterPhoneNumbers = (text: string, isPremium: boolean) => {
+  if (isPremium) return text;
+  const phoneRegex = /(?:(?:\+|0{0,2})91[\s-]?)?[6-9]\d{9}/g;
+  return text.replace(phoneRegex, " [📵 Number Hidden - Get Premium ₹49] ");
+};
 
 // --- Avatar Component ---
 function Avatar({
@@ -62,10 +78,23 @@ function ChatView({
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const [text, setText] = useState("");
+  const [isPremium, setIsPremium] = useState(false); // Default false, fetch from profile later
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!user) return;
+
+    // Fetch Premium Status
+    const checkPremium = async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("subscription_status")
+        .eq("id", user.id)
+        .single();
+      if (data?.subscription_status === "premium") setIsPremium(true);
+    };
+    checkPremium();
+
     const fetchMsgs = async () => {
       const { data } = await supabase
         .from("messages")
@@ -141,7 +170,7 @@ function ChatView({
     const { error } = await supabase.from("messages").insert({
       conversation_id: conversation.id,
       sender_id: user.id,
-      receiver_id: otherId, // Ye wahi naya column hai!
+      receiver_id: otherId,
       content,
     });
 
@@ -157,21 +186,27 @@ function ChatView({
   };
 
   return (
-    <div className="flex flex-col h-full bg-white">
-      <div className="flex items-center gap-3 p-4 border-b bg-blue-600 text-white">
+    <div className="flex flex-col h-full bg-white relative">
+      <div className="flex items-center gap-3 p-4 border-b bg-blue-600 text-white relative z-10">
         <button onClick={onBack} className="p-1 hover:bg-white/10 rounded-full">
           <ArrowLeft className="w-5 h-5" />
         </button>
         <Avatar profile={conversation.other_profile} size={8} />
         <div className="flex-1 min-w-0">
-          <p className="font-bold text-sm truncate">
+          <p className="font-bold text-sm truncate flex items-center gap-1">
             {conversation.other_profile?.full_name || "User"}
+            {isPremium && <Crown className="w-3 h-3 text-yellow-400" />}
           </p>
           <span className="text-[10px] opacity-70">Active Now</span>
         </div>
+        {!isPremium && (
+          <button className="text-[9px] bg-yellow-400 text-black px-2 py-1 rounded-full font-black uppercase">
+            UPGRADE ₹49
+          </button>
+        )}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50">
         {loading ? (
           <Loader2 className="w-6 h-6 animate-spin mx-auto mt-10 text-blue-600" />
         ) : (
@@ -181,9 +216,11 @@ function ChatView({
               className={`flex ${msg.sender_id === user?.id ? "justify-end" : "justify-start"}`}
             >
               <div
-                className={`max-w-[80%] p-3 rounded-2xl text-sm shadow-sm ${msg.sender_id === user?.id ? "bg-blue-600 text-white rounded-tr-none" : "bg-gray-100 text-gray-800 rounded-tl-none"}`}
+                className={`max-w-[80%] p-3 rounded-2xl text-sm shadow-sm ${msg.sender_id === user?.id ? "bg-blue-600 text-white rounded-tr-none" : "bg-white text-gray-800 rounded-tl-none border"}`}
               >
-                {msg.content}
+                {/* Apply Phone Filter Here */}
+                {filterPhoneNumbers(msg.content, isPremium)}
+
                 <div className="flex justify-end items-center gap-1 mt-1 opacity-60 text-[9px]">
                   {formatDistanceToNow(new Date(msg.created_at), {
                     addSuffix: false,
@@ -196,13 +233,24 @@ function ChatView({
             </div>
           ))
         )}
+        {!isPremium && (
+          <div className="flex items-center gap-2 justify-center py-2 text-gray-400 border-t border-dashed mt-4">
+            <ShieldAlert size={12} />
+            <span className="text-[9px] font-bold uppercase tracking-widest italic">
+              Safety Mode Active
+            </span>
+          </div>
+        )}
         <div ref={bottomRef} />
       </div>
 
-      <div className="p-4 border-t bg-gray-50">
-        <div className="flex items-center gap-2 bg-white p-2 rounded-full border shadow-sm">
+      <div className="p-4 border-t bg-white">
+        <div className="flex items-center gap-2 bg-gray-100 p-2 rounded-full border shadow-inner">
+          <button className="p-2 text-gray-400 hover:text-blue-600">
+            <ImageIcon size={18} />
+          </button>
           <input
-            className="flex-1 bg-transparent px-3 outline-none text-sm"
+            className="flex-1 bg-transparent px-3 outline-none text-sm font-medium"
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSend()}
@@ -210,7 +258,7 @@ function ChatView({
           />
           <button
             onClick={handleSend}
-            className="bg-blue-600 p-2 rounded-full text-white active:scale-90 transition-transform"
+            className="bg-blue-600 p-2 rounded-full text-white active:scale-90 transition-transform shadow-lg shadow-blue-200"
           >
             <Send className="w-4 h-4" />
           </button>
@@ -296,6 +344,7 @@ export default function ChatTray({ isOpen, onClose }: ChatTrayProps) {
           initial={{ x: "100%" }}
           animate={{ x: 0 }}
           exit={{ x: "100%" }}
+          transition={{ type: "spring", damping: 25, stiffness: 200 }}
           className="fixed top-0 right-0 bottom-0 w-full sm:w-[380px] z-[300] bg-white shadow-2xl flex flex-col"
         >
           {view === "list" ? (
