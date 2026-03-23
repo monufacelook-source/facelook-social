@@ -1,9 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Settings,
   User,
   Film,
-  MessageSquare,
   Heart as HeartIcon,
   Check,
   X,
@@ -12,6 +11,7 @@ import {
   Users,
   Bookmark,
   Zap,
+  Flame,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import FlicksTray from "@/components/layout/FlicksTray";
@@ -26,257 +26,271 @@ export default function Index() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
+  const [matchIdx, setMatchIdx] = useState(0);
   const petals = Array.from({ length: 15 });
 
-  // Real Style Image Links
+  const grooms = [
+    "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400",
+    "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400",
+    "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400",
+  ];
+  const brides = [
+    "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400",
+    "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400",
+    "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=400",
+  ];
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setMatchIdx((prev) => (prev + 1) % grooms.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
   const realUsers = [
-    "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=400&h=400&fit=crop", // Male 1
-    "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop", // Female 1
-    "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop", // Male 2
-    "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop", // Female 2
-    "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&h=400&fit=crop", // Male 3
+    "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=400",
+    "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400",
+    "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400",
+    "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400",
   ];
 
   return (
-    <div className="h-screen w-screen bg-[#e8edea] overflow-hidden flex flex-col relative selection:bg-green-200 font-sans">
-      {/* --- HEADER (Settings Fix) --- */}
-      <header className="h-14 bg-white/80 backdrop-blur-md border-b border-green-100 z-[60] flex items-center justify-between px-6 shrink-0 shadow-sm">
-        <h1 className="text-2xl font-black tracking-tighter text-blue-600 select-none">
+    <div className="h-screen w-screen bg-[#d1dbd3] overflow-hidden flex flex-col relative selection:bg-green-200 font-sans">
+      {/* --- HEADER --- */}
+      <header className="h-14 bg-white/60 backdrop-blur-xl border-b border-green-200/50 z-[60] flex items-center justify-between px-6 shrink-0">
+        <h1 className="text-2xl font-black tracking-tighter text-blue-600 select-none italic">
           FACELOOK
         </h1>
-        <div className="flex gap-4 items-center">
-          <button
-            onClick={() => setSettingsOpen(true)}
-            className="p-2 hover:bg-gray-100 rounded-full active:scale-90 transition-all"
-          >
-            <Settings className="w-5 h-5 text-gray-500" />
-          </button>
-        </div>
+        <button
+          onClick={() => setSettingsOpen(true)}
+          className="p-2 hover:bg-green-100 rounded-full transition-all"
+        >
+          <Settings className="w-5 h-5 text-green-700" />
+        </button>
       </header>
 
       <div className="flex flex-1 overflow-hidden relative">
-        {/* --- LEFT SIDE TRAY --- */}
+        {/* --- LEFT TRAY (FLICKS) --- */}
         <motion.div
           onClick={() => setFlicksOpen(true)}
-          className="absolute left-0 top-1/2 -translate-y-1/2 z-[50] bg-black text-white w-9 h-40 rounded-r-2xl flex items-center justify-center cursor-pointer shadow-2xl border-y border-r border-white/20"
+          className="absolute left-0 top-1/2 -translate-y-1/2 z-[50] bg-black text-white w-9 h-40 rounded-r-2xl flex items-center justify-center cursor-pointer shadow-2xl border border-white/10"
           whileHover={{ width: "45px" }}
         >
-          <span className="uppercase font-black text-[10px] tracking-[2px] [writing-mode:vertical-rl] rotate-180">
+          <span className="uppercase font-black text-[10px] tracking-[2px] [writing-mode:vertical-rl] rotate-180 opacity-70">
             FLICKS DVD
           </span>
         </motion.div>
 
-        <main className="flex-1 overflow-y-auto custom-scrollbar pb-24 scroll-smooth">
-          <div className="max-w-[620px] mx-auto py-6 px-4 space-y-12">
-            {/* --- HOOK REQUESTS (Box Style + 3 Visible) --- */}
-            <section className="space-y-4">
-              <div className="flex justify-between items-center px-2">
-                <h3 className="text-[11px] font-black text-gray-500 tracking-[3px] uppercase">
-                  Hook Requests
+        {/* --- MAIN CONTENT AREA --- */}
+        <main className="flex-1 overflow-y-auto no-scrollbar pb-32">
+          <div className="max-w-[620px] mx-auto py-6 space-y-10">
+            {/* VIRAL ON FACELOOK (Wapas Add Kar Diya!) */}
+            <section className="px-4">
+              <div className="flex items-center gap-2 mb-4">
+                <Flame className="w-5 h-5 text-orange-500 fill-orange-500" />
+                <h3 className="text-[11px] font-black text-green-900 tracking-[3px] uppercase italic">
+                  Viral on Facelook
                 </h3>
-                <Zap className="w-4 h-4 text-yellow-500 fill-yellow-500" />
               </div>
-              <div className="flex gap-4 overflow-x-auto no-scrollbar py-2 px-1">
-                {realUsers.map((url, i) => (
+              <div className="flex gap-3 overflow-x-auto no-scrollbar">
+                {[1, 2, 3].map((v) => (
                   <div
-                    key={i}
-                    className="min-w-[140px] h-[190px] relative bg-white rounded-3xl overflow-hidden shadow-md border border-gray-100 group"
+                    key={v}
+                    className="min-w-[280px] h-[160px] bg-gradient-to-br from-blue-600 to-indigo-800 rounded-[2rem] p-5 relative overflow-hidden shadow-xl border border-white/20"
                   >
-                    <img
-                      src={url}
-                      className="w-full h-full object-cover"
-                      alt="hook-user"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
-                    <div className="absolute bottom-0 p-3 w-full text-center">
-                      <p className="text-[10px] font-black text-white uppercase mb-2">
-                        User {i + 1}
+                    <div className="relative z-10">
+                      <span className="bg-white/20 text-white text-[8px] font-bold px-3 py-1 rounded-full uppercase">
+                        Trending
+                      </span>
+                      <p className="text-white font-black text-lg leading-tight mt-3">
+                        The New Era of
+                        <br />
+                        Social Matchmaking
                       </p>
-                      <div className="flex gap-2 justify-center">
-                        <button className="bg-blue-600 text-white p-1.5 rounded-lg shadow-lg hover:scale-110 transition-transform">
-                          <Check className="w-3.5 h-3.5" />
-                        </button>
-                        <button className="bg-white/20 backdrop-blur-md text-white p-1.5 rounded-lg border border-white/30 hover:scale-110 transition-transform">
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
+                    </div>
+                    <div className="absolute right-[-20px] bottom-[-20px] opacity-20">
+                      <Film className="w-32 h-32 text-white" />
                     </div>
                   </div>
                 ))}
               </div>
             </section>
 
-            {/* --- STORY SECTION --- */}
-            <section className="flex gap-4 overflow-x-auto no-scrollbar px-2">
-              <div className="flex flex-col items-center gap-2 shrink-0">
-                <div className="w-14 h-14 rounded-full bg-white border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer shadow-sm">
-                  <Plus className="w-5 h-5 text-gray-400" />
-                </div>
-                <span className="text-[9px] font-bold text-gray-500 uppercase italic">
-                  Your Story
-                </span>
-              </div>
-              {realUsers.map((url, s) => (
-                <div
-                  key={s}
-                  className="flex flex-col items-center gap-2 shrink-0 cursor-pointer"
-                >
-                  <div className="w-14 h-14 rounded-full p-0.5 bg-gradient-to-tr from-yellow-400 to-blue-600 shadow-md">
+            {/* HOOK REQUESTS */}
+            <section className="space-y-4 px-4">
+              <h3 className="text-[11px] font-black text-green-800 tracking-[3px] uppercase px-1">
+                Hook Requests
+              </h3>
+              <div className="flex gap-4 overflow-x-auto no-scrollbar">
+                {realUsers.map((url, i) => (
+                  <motion.div
+                    key={i}
+                    whileHover={{ y: -5 }}
+                    className="min-w-[140px] h-[190px] relative rounded-3xl overflow-hidden shadow-2xl shrink-0"
+                  >
                     <img
                       src={url}
-                      className="w-full h-full rounded-full object-cover border-2 border-white"
-                      alt="story"
+                      className="w-full h-full object-cover"
+                      alt="user"
                     />
-                  </div>
-                  <span className="text-[9px] font-black text-gray-600 uppercase">
-                    Active
-                  </span>
-                </div>
-              ))}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent" />
+                    <div className="absolute bottom-3 w-full flex justify-center gap-2">
+                      <button className="bg-blue-600 p-2 rounded-xl text-white shadow-lg">
+                        <Check className="w-3 h-3" />
+                      </button>
+                      <button className="bg-white/20 p-2 rounded-xl text-white backdrop-blur-md">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
             </section>
 
-            {/* --- MATCHMAKING VS STYLE (In My Heart) --- */}
-            <section className="bg-[#2d0202] rounded-[3rem] shadow-2xl overflow-hidden border-b-4 border-red-900 relative min-h-[420px] mx-1">
-              {/* Petals Animation */}
+            {/* VELVET RED MATRIMONY (Matchmaking Animated) */}
+            <section className="bg-[#2d0202] rounded-[3.5rem] shadow-2xl overflow-hidden border-b-[6px] border-red-900 relative min-h-[440px] mx-4">
               <div className="absolute inset-0 pointer-events-none z-10">
                 {petals.map((_, i) => (
                   <motion.div
                     key={i}
-                    initial={{ y: -50, opacity: 0 }}
-                    animate={{ y: 500, opacity: [0, 1, 0], rotate: 360 }}
+                    animate={{ y: [0, 500], opacity: [0, 1, 0] }}
                     transition={{
-                      duration: 5,
+                      duration: 6,
                       repeat: Infinity,
-                      delay: i * 0.5,
+                      delay: i * 0.4,
                     }}
-                    className="absolute text-red-500/20"
-                    style={{ left: `${Math.random() * 100}%` }}
+                    className="absolute text-red-500/20 text-xl"
+                    style={{ left: `${(i * 7) % 100}%` }}
                   >
                     🌹
                   </motion.div>
                 ))}
               </div>
-
-              <div className="px-8 py-8 flex flex-col items-center relative z-20">
-                <div className="flex items-center gap-3 mb-8">
-                  <HeartIcon className="w-5 h-5 text-red-600 fill-red-600 animate-pulse" />
-                  <span className="font-black text-white tracking-[6px] text-[10px] uppercase">
-                    Velvet Matrimony
-                  </span>
-                </div>
-
-                {/* THE VS MATCHUP */}
-                <div className="flex items-center justify-between w-full gap-2 px-2">
-                  {/* Boy */}
-                  <div className="flex-1 flex flex-col items-center gap-3">
-                    <div className="w-24 h-32 rounded-2xl overflow-hidden border-2 border-red-800 shadow-2xl rotate-[-3deg]">
-                      <img
-                        src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=500&fit=crop"
-                        className="w-full h-full object-cover"
-                        alt="groom"
-                      />
-                    </div>
-                    <span className="text-[10px] font-black text-white/70 italic uppercase">
-                      The Groom
-                    </span>
+              <div className="px-8 py-10 flex flex-col items-center relative z-20">
+                <HeartIcon className="w-6 h-6 text-red-600 fill-red-600 animate-pulse mb-8" />
+                <div className="flex items-center justify-around w-full">
+                  <AnimatePresence mode="wait">
+                    <motion.img
+                      key={matchIdx + "g"}
+                      initial={{ scale: 0.8, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0.8, opacity: 0 }}
+                      src={grooms[matchIdx]}
+                      className="w-28 h-36 rounded-2xl object-cover border-2 border-red-800 rotate-[-4deg]"
+                    />
+                  </AnimatePresence>
+                  <div className="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center border-4 border-[#2d0202] z-30 shadow-xl">
+                    <span className="text-white font-black italic">VS</span>
                   </div>
-
-                  {/* VS Middle */}
-                  <div className="flex flex-col items-center shrink-0">
-                    <div className="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center border-4 border-[#2d0202] shadow-xl z-30">
-                      <span className="text-white font-black italic">VS</span>
-                    </div>
-                    <div className="h-20 w-px bg-gradient-to-b from-transparent via-red-800 to-transparent"></div>
-                  </div>
-
-                  {/* Girl */}
-                  <div className="flex-1 flex flex-col items-center gap-3">
-                    <div className="w-24 h-32 rounded-2xl overflow-hidden border-2 border-red-800 shadow-2xl rotate-[3deg]">
-                      <img
-                        src="https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=400&h=500&fit=crop"
-                        className="w-full h-full object-cover"
-                        alt="bride"
-                      />
-                    </div>
-                    <span className="text-[10px] font-black text-white/70 italic uppercase">
-                      The Bride
-                    </span>
-                  </div>
+                  <AnimatePresence mode="wait">
+                    <motion.img
+                      key={matchIdx + "b"}
+                      initial={{ scale: 0.8, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0.8, opacity: 0 }}
+                      src={brides[matchIdx]}
+                      className="w-28 h-36 rounded-2xl object-cover border-2 border-red-800 rotate-[4deg]"
+                    />
+                  </AnimatePresence>
                 </div>
-
-                <div className="mt-8 text-center space-y-2">
-                  <p className="text-white font-black tracking-tighter text-lg italic">
-                    "A Perfect Celestial Match"
-                  </p>
-                  <button className="bg-red-600 text-white px-8 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-red-700 transition-colors shadow-xl">
-                    Get Matched
-                  </button>
-                </div>
+                <button className="mt-10 bg-white text-red-900 px-10 py-3 rounded-full text-[10px] font-black uppercase tracking-[3px] shadow-2xl">
+                  Get Matched
+                </button>
               </div>
             </section>
 
-            <MainFeed />
+            {/* MAIN FEED (Now Direct on Background) */}
+            <div className="px-0">
+              <MainFeed />
+            </div>
           </div>
         </main>
 
-        {/* --- RIGHT SIDE TRAY --- */}
+        {/* --- RIGHT TRAY (F-CHAT) --- */}
         <motion.div
           onClick={() => setChatOpen(true)}
-          className="absolute right-0 top-1/2 -translate-y-1/2 z-[50] bg-blue-600 text-white w-9 h-40 rounded-l-2xl flex items-center justify-center cursor-pointer shadow-2xl border-y border-l border-white/20"
+          className="absolute right-0 top-1/2 -translate-y-1/2 z-[50] bg-blue-600 text-white w-9 h-40 rounded-l-2xl flex items-center justify-center cursor-pointer shadow-2xl"
           whileHover={{ width: "45px" }}
         >
-          <span className="uppercase font-black text-[10px] tracking-[2px] [writing-mode:vertical-rl] rotate-0">
-            CHATIKS 🩴
+          <span className="uppercase font-black text-[10px] tracking-[3px] [writing-mode:vertical-rl] rotate-0 text-blue-100">
+            F-CHAT 🩴
           </span>
         </motion.div>
       </div>
 
-      {/* --- BOTTOM MENU --- */}
-      <nav className="h-20 bg-white border-t border-green-100 fixed bottom-0 left-0 right-0 z-[60] flex items-center justify-around px-2">
+      {/* --- BOTTOM NAV --- */}
+      <nav className="h-20 bg-white/80 backdrop-blur-lg border-t border-green-200 fixed bottom-0 left-0 right-0 z-[60] flex items-center justify-around">
         <button
           onClick={() => setFlicksOpen(true)}
           className="flex flex-col items-center gap-1"
         >
-          <Film className="w-6 h-6 text-gray-400" />
-          <span className="text-[8px] font-black uppercase text-gray-400">
+          <Film className="w-6 h-6 text-green-900/40" />
+          <span className="text-[7px] font-black uppercase text-green-900/40">
             Flicks
           </span>
         </button>
         <button className="flex flex-col items-center gap-1">
-          <Users className="w-6 h-6 text-gray-400" />
-          <span className="text-[8px] font-black uppercase text-gray-400">
+          <Users className="w-6 h-6 text-green-900/40" />
+          <span className="text-[7px] font-black uppercase text-green-900/40">
             Groups
           </span>
         </button>
         <div
           onClick={() => setProfileOpen(true)}
-          className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center -mt-12 border-[6px] border-[#e8edea] shadow-xl text-white cursor-pointer active:scale-90 transition-transform"
+          className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center -mt-10 border-[6px] border-[#d1dbd3] shadow-xl text-white cursor-pointer active:scale-90 transition-transform"
         >
           <User className="w-8 h-8" />
         </div>
-        <button className="flex flex-col items-center gap-1 relative">
-          <Bell className="w-6 h-6 text-gray-400" />
-          <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-          <span className="text-[8px] font-black uppercase text-gray-400">
+        <button className="flex flex-col items-center gap-1">
+          <Bell className="w-6 h-6 text-green-900/40" />
+          <span className="text-[7px] font-black uppercase text-green-900/40">
             Alerts
           </span>
         </button>
         <button className="flex flex-col items-center gap-1">
-          <Bookmark className="w-6 h-6 text-gray-400" />
-          <span className="text-[8px] font-black uppercase text-gray-400">
+          <Bookmark className="w-6 h-6 text-green-900/40" />
+          <span className="text-[7px] font-black uppercase text-green-900/40">
             Hooks
           </span>
         </button>
       </nav>
 
-      {/* OVERLAYS */}
+      {/* FULL SCREEN F-CHAT OVERLAY */}
       <AnimatePresence>
+        {chatOpen && (
+          <motion.div
+            initial={{ x: "100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "100%" }}
+            transition={{ type: "spring", damping: 25 }}
+            className="fixed inset-0 z-[200] bg-white flex flex-col"
+          >
+            <div className="h-16 bg-blue-600 flex items-center justify-between px-6 text-white shrink-0">
+              <div className="flex items-center gap-3">
+                <span className="text-xl">🩴</span>
+                <h2 className="font-black tracking-[5px] uppercase text-sm">
+                  F-CHAT
+                </h2>
+              </div>
+              <button
+                onClick={() => setChatOpen(false)}
+                className="bg-white/20 p-2 rounded-full"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="flex-1">
+              <ChatTray isOpen={true} onClose={() => setChatOpen(false)} />
+            </div>
+          </motion.div>
+        )}
         {flicksOpen && (
           <motion.div
             initial={{ x: "-100%" }}
             animate={{ x: 0 }}
             exit={{ x: "-100%" }}
-            className="fixed inset-0 z-[110] bg-black"
+            transition={{ type: "spring", damping: 25 }}
+            className="fixed inset-0 z-[200] bg-black"
           >
             <FlicksTray
               isOpen={flicksOpen}
@@ -284,63 +298,25 @@ export default function Index() {
             />
           </motion.div>
         )}
-        {chatOpen && (
-          <motion.div
-            initial={{ y: "100%" }}
-            animate={{ y: 0 }}
-            exit={{ y: "100%" }}
-            className="fixed inset-0 z-[110] bg-white flex flex-col"
-          >
-            <div className="h-16 bg-blue-600 flex items-center justify-between px-6 text-white shrink-0">
-              <div className="flex items-center gap-3">
-                <span className="text-xl">🩴</span>
-                <h2 className="font-black tracking-[4px] uppercase text-sm">
-                  Chatiks
-                </h2>
-              </div>
-              <button
-                onClick={() => setChatOpen(false)}
-                className="font-bold text-xl"
-              >
-                ✕
-              </button>
-            </div>
-            <ChatTray isOpen={true} onClose={() => setChatOpen(false)} />
-          </motion.div>
-        )}
       </AnimatePresence>
 
-      {/* SETTINGS PANEL (With Close Fix) */}
       <AnimatePresence>
         {settingsOpen && (
-          <div className="fixed inset-0 z-[120]">
+          <div className="fixed inset-0 z-[210]">
             <div
-              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+              className="absolute inset-0 bg-black/40 backdrop-blur-md"
               onClick={() => setSettingsOpen(false)}
             />
             <motion.div
-              initial={{ x: "100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "100%" }}
-              className="absolute right-0 top-0 bottom-0 w-[80%] bg-white shadow-2xl flex flex-col"
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              className="absolute bottom-0 left-0 right-0 h-[80%] bg-white rounded-t-[3rem] shadow-2xl p-6"
             >
-              <div className="h-16 border-b flex items-center justify-between px-6">
-                <h2 className="font-black uppercase tracking-widest">
-                  Settings
-                </h2>
-                <button
-                  onClick={() => setSettingsOpen(false)}
-                  className="p-2 bg-gray-100 rounded-full"
-                >
-                  <X className="w-5 h-5 text-gray-600" />
-                </button>
-              </div>
-              <div className="p-6">
-                <SettingsPanel
-                  isOpen={true}
-                  onClose={() => setSettingsOpen(false)}
-                />
-              </div>
+              <SettingsPanel
+                isOpen={true}
+                onClose={() => setSettingsOpen(false)}
+              />
             </motion.div>
           </div>
         )}
