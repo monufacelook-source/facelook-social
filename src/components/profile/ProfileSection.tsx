@@ -257,7 +257,7 @@ export default function ProfileSection({
           </p>
         </div>
 
-        {/* --- STATS SECTION (FIXED & ADDED) --- */}
+        {/* --- STATS SECTION --- */}
         <div className="grid grid-cols-3 gap-2 mt-8 px-2">
           <div className="bg-secondary/10 p-4 rounded-[2rem] text-center border border-white/5">
             <p className="text-xl font-black">{posts.length}</p>
@@ -281,7 +281,7 @@ export default function ProfileSection({
           </div>
         </div>
 
-        {/* --- GALLERY SECTION (FIXED & ADDED) --- */}
+        {/* --- GALLERY SECTION --- */}
         <div className="mt-10 px-2 pb-20">
           <div className="flex items-center gap-2 mb-6">
             <Grid size={20} className="text-rose-500" />
@@ -299,9 +299,16 @@ export default function ProfileSection({
                   className="aspect-square rounded-2xl overflow-hidden bg-secondary/20 border border-white/5 relative group"
                 >
                   <img
-                    src={post.media_url}
+                    src={
+                      post.media_url ||
+                      "https://via.placeholder.com/300?text=Error"
+                    }
                     className="w-full h-full object-cover"
                     alt="post"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src =
+                        "https://via.placeholder.com/300?text=Broken+Link";
+                    }}
                   />
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                     <Heart size={16} className="text-white fill-white" />
@@ -350,7 +357,6 @@ export default function ProfileSection({
               </div>
 
               <div className="space-y-4">
-                {/* Inputs for full_name, bio, etc. (Same as before) */}
                 <div className="space-y-1">
                   <label className="text-[10px] font-black uppercase text-muted-foreground ml-1">
                     Full Name
@@ -363,6 +369,57 @@ export default function ProfileSection({
                     className="w-full bg-secondary/10 border-none rounded-2xl p-4 font-bold"
                   />
                 </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase text-muted-foreground ml-1">
+                    Mobile (Private)
+                  </label>
+                  <input
+                    type="tel"
+                    value={editData.mobile_number}
+                    onChange={(e) =>
+                      setEditData({
+                        ...editData,
+                        mobile_number: e.target.value,
+                      })
+                    }
+                    className="w-full bg-secondary/10 border-none rounded-2xl p-4 font-bold"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase text-muted-foreground ml-1">
+                      Current City
+                    </label>
+                    <input
+                      value={editData.current_location}
+                      onChange={(e) =>
+                        setEditData({
+                          ...editData,
+                          current_location: e.target.value,
+                        })
+                      }
+                      className="w-full bg-secondary/10 border-none rounded-2xl p-4 font-bold"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase text-muted-foreground ml-1">
+                      College/School
+                    </label>
+                    <input
+                      value={editData.school_name}
+                      onChange={(e) =>
+                        setEditData({
+                          ...editData,
+                          school_name: e.target.value,
+                        })
+                      }
+                      className="w-full bg-secondary/10 border-none rounded-2xl p-4 font-bold"
+                    />
+                  </div>
+                </div>
+
                 <div className="space-y-1">
                   <label className="text-[10px] font-black uppercase text-muted-foreground ml-1">
                     Bio
@@ -375,7 +432,6 @@ export default function ProfileSection({
                     className="w-full bg-secondary/10 border-none rounded-2xl p-4 font-bold h-24 resize-none"
                   />
                 </div>
-                {/* ... other inputs (location, school etc) */}
               </div>
 
               <button
