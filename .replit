@@ -1,4 +1,5 @@
 modules = ["nodejs-20", "web"]
+
 [agent]
 expertMode = true
 
@@ -8,7 +9,12 @@ packages = ["psmisc"]
 
 [deployment]
 deploymentTarget = "autoscale"
-run = ["sh", "-c", "npm run build && npx vite preview --host 0.0.0.0 --port 3000"]
+# Deployment ke liye 3000 port hi fix rakhte hain
+run = [
+  "sh",
+  "-c",
+  "npm run build && npx vite preview --host 0.0.0.0 --port 3000",
+]
 build = ["npm", "run", "build"]
 
 [workflows]
@@ -33,21 +39,12 @@ outputType = "webview"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "npm run dev"
-waitForPort = 5000
+# Isse Replit ko pata chalega ki app 3000 par ready hogi
+waitForPort = 3000
 
 [[ports]]
 localPort = 3000
-
-[[ports]]
-localPort = 3001
-
-[[ports]]
-localPort = 5000
-
-[[ports]]
-localPort = 5001
-
-[userenv]
+externalPort = 80
 
 [userenv.shared]
 VITE_SUPABASE_URL = "https://qjkojvoypynmsvqvqlyk.supabase.co"

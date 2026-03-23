@@ -20,7 +20,11 @@ export default function CreatePost() {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) {
-      toast({ title: "Image too large", description: "Please pick an image under 5 MB.", variant: "destructive" });
+      toast({
+        title: "Image too large",
+        description: "Please pick an image under 5 MB.",
+        variant: "destructive",
+      });
       return;
     }
     setImageFile(file);
@@ -45,16 +49,22 @@ export default function CreatePost() {
       const ext = imageFile.name.split(".").pop();
       const path = `${user.id}/${Date.now()}.${ext}`;
       const { error: uploadError } = await supabase.storage
-        .from("post-images")
+        .from("POSTS")
         .upload(path, imageFile, { upsert: false });
 
       if (uploadError) {
-        toast({ title: "Upload failed", description: uploadError.message, variant: "destructive" });
+        toast({
+          title: "Upload failed",
+          description: uploadError.message,
+          variant: "destructive",
+        });
         setSubmitting(false);
         return;
       }
 
-      const { data: urlData } = supabase.storage.from("post-images").getPublicUrl(path);
+      const { data: urlData } = supabase.storage
+        .from("POSTS")
+        .getPublicUrl(path);
       image_url = urlData.publicUrl;
     }
 
@@ -67,7 +77,11 @@ export default function CreatePost() {
     setSubmitting(false);
 
     if (error) {
-      toast({ title: "Post failed", description: error.message, variant: "destructive" });
+      toast({
+        title: "Post failed",
+        description: error.message,
+        variant: "destructive",
+      });
       return;
     }
 
@@ -77,7 +91,10 @@ export default function CreatePost() {
     toast({ title: "Posted! 🎉", description: "Your post is now live." });
   };
 
-  const avatarFallback = profile?.full_name?.[0]?.toUpperCase() ?? user?.email?.[0]?.toUpperCase() ?? "?";
+  const avatarFallback =
+    profile?.full_name?.[0]?.toUpperCase() ??
+    user?.email?.[0]?.toUpperCase() ??
+    "?";
 
   return (
     <motion.div
@@ -91,7 +108,11 @@ export default function CreatePost() {
           {/* Avatar */}
           <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white text-sm font-bold flex-shrink-0 overflow-hidden">
             {profile?.avatar_url ? (
-              <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
+              <img
+                src={profile.avatar_url}
+                alt=""
+                className="w-full h-full object-cover"
+              />
             ) : (
               avatarFallback
             )}
@@ -117,7 +138,11 @@ export default function CreatePost() {
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.95 }}
                 >
-                  <img src={imagePreview} alt="preview" className="w-full max-h-48 object-cover rounded-xl" />
+                  <img
+                    src={imagePreview}
+                    alt="preview"
+                    className="w-full max-h-48 object-cover rounded-xl"
+                  />
                   <button
                     type="button"
                     onClick={removeImage}
@@ -160,7 +185,11 @@ export default function CreatePost() {
                 className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold bg-gradient-to-r from-primary to-secondary text-white disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
                 whileTap={{ scale: 0.93 }}
               >
-                {submitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                {submitting ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Send className="w-3.5 h-3.5" />
+                )}
                 Post
               </motion.button>
             </div>
