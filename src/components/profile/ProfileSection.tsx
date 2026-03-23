@@ -66,7 +66,7 @@ export default function ProfileSection({
         supabase
           .from("posts")
           .select("*")
-          .eq("user_id", profileId)
+          .eq("user_id", profileId) // Make sure user_id column exists in Supabase
           .order("created_at", { ascending: false }),
       ]);
 
@@ -335,6 +335,7 @@ export default function ProfileSection({
                 >
                   <img
                     src={
+                      post.image_url ||
                       post.media_url ||
                       "https://via.placeholder.com/300?text=No+Image"
                     }
@@ -391,7 +392,9 @@ export default function ProfileSection({
                 key={posts[viewerIndex].id}
                 initial={{ opacity: 0, scale: 0.9, x: 50 }}
                 animate={{ opacity: 1, scale: 1, x: 0 }}
-                src={posts[viewerIndex].media_url}
+                src={
+                  posts[viewerIndex].image_url || posts[viewerIndex].media_url
+                }
                 className="max-w-full max-h-full object-contain rounded-xl shadow-2xl"
               />
 
@@ -476,7 +479,7 @@ export default function ProfileSection({
                     onChange={(e) =>
                       setEditData({ ...editData, full_name: e.target.value })
                     }
-                    className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 font-bold focus:border-purple-500 transition-colors outline-none"
+                    className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 font-bold focus:border-purple-500 transition-colors outline-none text-white"
                   />
                 </div>
                 <div className="space-y-2">
@@ -488,7 +491,7 @@ export default function ProfileSection({
                     onChange={(e) =>
                       setEditData({ ...editData, bio: e.target.value })
                     }
-                    className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 font-bold h-28 resize-none focus:border-purple-500 outline-none"
+                    className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 font-bold h-28 resize-none focus:border-purple-500 outline-none text-white"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -504,7 +507,7 @@ export default function ProfileSection({
                           current_location: e.target.value,
                         })
                       }
-                      className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 font-bold outline-none"
+                      className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 font-bold outline-none text-white"
                     />
                   </div>
                   <div className="space-y-2">
@@ -519,7 +522,7 @@ export default function ProfileSection({
                           school_name: e.target.value,
                         })
                       }
-                      className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 font-bold outline-none"
+                      className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 font-bold outline-none text-white"
                     />
                   </div>
                 </div>
