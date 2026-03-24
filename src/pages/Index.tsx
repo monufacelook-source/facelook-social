@@ -15,8 +15,8 @@ import {
   Search,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { supabase } from "@/lib/supabase"; // Real-time notification logic ke liye
-import { useAuth } from "@/contexts/AuthContext"; // Current user id ke liye
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
 import FlicksTray from "@/components/layout/FlicksTray";
 import ChatTray from "@/components/layout/ChatTray";
 import MainFeed from "@/components/feed/MainFeed";
@@ -24,17 +24,17 @@ import ProfileSection from "@/components/profile/ProfileSection";
 import SettingsPanel from "@/components/settings/SettingsPanel";
 import SearchUsers from "@/components/SearchUsers";
 import NotificationPanel from "@/components/NotificationPanel";
-import FriendListOverlay from "@/components/FriendListOverlay"; // 👈 Nayi file hum agle step me banayenge
+import FriendListOverlay from "@/components/FriendListOverlay";
 
 export default function Index() {
   const { user } = useAuth();
   const [flicksOpen, setFlicksOpen] = useState(false);
-  const [chatOpen, setChatOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false); // Ye ab 'Vibe' ke liye hai
   const [profileOpen, setProfileOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [alertsOpen, setAlertsOpen] = useState(false);
-  const [friendsListOpen, setFriendsListOpen] = useState(false); // 👈 Management ke liye
+  const [friendsListOpen, setFriendsListOpen] = useState(false);
 
   // --- NOTIFICATION & SOUND LOGIC ---
   const [notifCount, setNotifCount] = useState(0);
@@ -43,7 +43,6 @@ export default function Index() {
   useEffect(() => {
     if (!user) return;
 
-    // 1. Initial Notification Count Fetch
     const fetchNotifCount = async () => {
       const { count } = await supabase
         .from("friendships")
@@ -55,7 +54,6 @@ export default function Index() {
 
     fetchNotifCount();
 
-    // 2. Real-time Subscription for New Notifications
     const channel = supabase
       .channel("schema-db-changes")
       .on(
@@ -112,7 +110,6 @@ export default function Index() {
 
   return (
     <div className="h-screen w-screen bg-[#d1dbd3] overflow-hidden flex flex-col relative selection:bg-green-200 font-sans">
-      {/* 🔊 Hidden Audio Element for Notification */}
       <audio
         ref={audioRef}
         src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3"
@@ -141,13 +138,19 @@ export default function Index() {
       </header>
 
       <div className="flex flex-1 overflow-hidden relative">
+        {/* --- FLICKS SIDE BUTTON (NEW DESIGN) --- */}
         <motion.div
           onClick={() => setFlicksOpen(true)}
-          className="absolute left-0 top-1/2 -translate-y-1/2 z-[50] bg-black text-white w-9 h-40 rounded-r-2xl flex items-center justify-center cursor-pointer shadow-2xl border border-white/10"
-          whileHover={{ width: "45px" }}
+          className="absolute left-0 top-1/2 -translate-y-1/2 z-[50] bg-black/10 backdrop-blur-md text-black/70 w-7 h-32 rounded-r-2xl flex items-center justify-center cursor-pointer border border-white/20 shadow-xl"
+          whileHover={{
+            width: "35px",
+            backgroundColor: "rgba(0,0,0,0.2)",
+            color: "#000",
+          }}
+          whileTap={{ scale: 0.95 }}
         >
-          <span className="uppercase font-black text-[10px] tracking-[2px] [writing-mode:vertical-rl] rotate-180 opacity-70">
-            FLICKS DVD
+          <span className="uppercase font-black text-[9px] tracking-[2px] [writing-mode:vertical-rl] rotate-180">
+            FLICKS 📀
           </span>
         </motion.div>
 
@@ -272,13 +275,19 @@ export default function Index() {
           </div>
         </main>
 
+        {/* --- VIBE SIDE BUTTON (NEW DESIGN) --- */}
         <motion.div
           onClick={() => setChatOpen(true)}
-          className="absolute right-0 top-1/2 -translate-y-1/2 z-[50] bg-blue-600 text-white w-9 h-40 rounded-l-2xl flex items-center justify-center cursor-pointer shadow-2xl"
-          whileHover={{ width: "45px" }}
+          className="absolute right-0 top-1/2 -translate-y-1/2 z-[50] bg-blue-600/10 backdrop-blur-md text-blue-700/70 w-7 h-32 rounded-l-2xl flex items-center justify-center cursor-pointer border border-blue-200/20 shadow-xl"
+          whileHover={{
+            width: "35px",
+            backgroundColor: "rgba(37, 99, 235, 0.2)",
+            color: "#2563eb",
+          }}
+          whileTap={{ scale: 0.95 }}
         >
-          <span className="uppercase font-black text-[10px] tracking-[3px] [writing-mode:vertical-rl] rotate-0 text-blue-100">
-            F-CHAT 🩴
+          <span className="uppercase font-black text-[9px] tracking-[3px] [writing-mode:vertical-rl]">
+            VIBE ⚡
           </span>
         </motion.div>
       </div>
@@ -287,10 +296,14 @@ export default function Index() {
       <nav className="h-20 bg-white/80 backdrop-blur-lg border-t border-green-200 fixed bottom-0 left-0 right-0 z-[60] flex items-center justify-around">
         <button
           onClick={() => setFlicksOpen(true)}
-          className="flex flex-col items-center gap-1"
+          className="flex flex-col items-center gap-1 group"
         >
-          <Film className="w-6 h-6 text-green-900/40" />
-          <span className="text-[7px] font-black uppercase text-green-900/40">
+          <Film
+            className={`w-6 h-6 ${flicksOpen ? "text-blue-600" : "text-green-900/40"} group-active:scale-125 transition-transform`}
+          />
+          <span
+            className={`text-[7px] font-black uppercase ${flicksOpen ? "text-blue-600" : "text-green-900/40"}`}
+          >
             Flicks
           </span>
         </button>
@@ -307,7 +320,6 @@ export default function Index() {
           <User className="w-8 h-8" />
         </div>
 
-        {/* 🔔 ALERTS WITH BADGE COUNT */}
         <button
           onClick={() => {
             setAlertsOpen(true);
@@ -338,7 +350,10 @@ export default function Index() {
         </button>
       </nav>
 
-      {/* FULL SCREEN SEARCH OVERLAY */}
+      {/* --- OVERLAYS --- */}
+
+      <FlicksTray isOpen={flicksOpen} onClose={() => setFlicksOpen(false)} />
+
       <AnimatePresence>
         {searchOpen && (
           <motion.div
@@ -365,7 +380,6 @@ export default function Index() {
         )}
       </AnimatePresence>
 
-      {/* FULL SCREEN ALERTS OVERLAY */}
       <AnimatePresence>
         {alertsOpen && (
           <motion.div
@@ -395,7 +409,6 @@ export default function Index() {
         )}
       </AnimatePresence>
 
-      {/* CHAT & FLICKS OVERLAYS */}
       <AnimatePresence>
         {chatOpen && (
           <motion.div
@@ -404,13 +417,13 @@ export default function Index() {
             exit={{ x: "100%" }}
             className="fixed inset-0 z-[200] bg-white flex flex-col"
           >
-            <div className="h-16 bg-blue-600 flex items-center justify-between px-6 text-white shrink-0">
+            <div className="h-16 bg-blue-600 flex items-center justify-between px-6 text-white shrink-0 shadow-lg">
               <h2 className="font-black tracking-[5px] uppercase text-sm italic">
-                F-CHAT 🩴
+                VIBE ⚡
               </h2>
               <button
                 onClick={() => setChatOpen(false)}
-                className="bg-white/20 p-2 rounded-full"
+                className="bg-white/20 p-2 rounded-full hover:bg-white/30 transition-colors"
               >
                 <X className="w-6 h-6" />
               </button>
@@ -422,7 +435,6 @@ export default function Index() {
         )}
       </AnimatePresence>
 
-      {/* SETTINGS, PROFILE & FRIEND LIST OVERLAYS */}
       <AnimatePresence>
         {settingsOpen && (
           <div className="fixed inset-0 z-[210]">
@@ -453,7 +465,6 @@ export default function Index() {
         {profileOpen && <ProfileSection onBack={() => setProfileOpen(false)} />}
       </AnimatePresence>
 
-      {/* NEW: FRIEND MANAGEMENT OVERLAY */}
       <AnimatePresence>
         {friendsListOpen && (
           <motion.div
