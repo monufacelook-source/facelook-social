@@ -145,13 +145,14 @@ export default function PostCard({ post, index }: PostCardProps) {
   const avatarFallback = author?.full_name?.[0]?.toUpperCase() ?? "?";
   const displayName = author?.full_name ?? author?.username ?? "Anonymous";
   const displayUsername = author?.username ? `@${author.username}` : "";
+  const isLocked = author?.is_locked && user?.id !== post.user_id;
 
   return (
     <AnimatePresence mode="wait">
       <motion.article
         key={post.id}
         className={cn(
-          "glass-card overflow-hidden transition-all",
+          "glass-card overflow-hidden transition-all relative",
           isHook && "border-rose-500/30 shadow-[0_0_20px_rgba(225,29,72,0.15)]",
         )}
         initial={{ opacity: 0, y: 20 }}
@@ -221,14 +222,28 @@ export default function PostCard({ post, index }: PostCardProps) {
           </div>
         </div>
 
-        {/* Content */}
-        {post.content && (
-          <p className="px-4 pb-3 text-sm leading-relaxed">{post.content}</p>
+        {/* Locked Profile Overlay */}
+        {isLocked && (
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/10 backdrop-blur-md rounded-[inherit]">
+            <div className="bg-white/20 backdrop-blur-xl border border-white/30 px-4 py-2 rounded-full flex items-center gap-2 shadow-lg">
+              <span className="text-sm">🔒</span>
+              <span className="text-xs font-black uppercase tracking-widest text-gray-700">
+                Profile Locked
+              </span>
+            </div>
+          </div>
         )}
 
-        {/* Image - FIXED: Now checks both image_url and media_url */}
+        {/* Content */}
+        {post.content && (
+          <p className={`px-4 pb-3 text-sm leading-relaxed ${isLocked ? "blur-sm select-none pointer-events-none" : ""}`}>
+            {post.content}
+          </p>
+        )}
+
+        {/* Image - checks both image_url and media_url */}
         {(post.image_url || post.media_url) && (
-          <div className="relative overflow-hidden">
+          <div className={`relative overflow-hidden ${isLocked ? "blur-md pointer-events-none" : ""}`}>
             <img
               src={post.image_url || post.media_url}
               alt=""

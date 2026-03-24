@@ -16,7 +16,7 @@ const AuthContext = createContext<AuthContextType>({
   session: null,
   user: null,
   profile: null,
-  loading: true,
+  loading: false,
   signOut: async () => {},
   refreshProfile: async () => {},
 });
@@ -26,7 +26,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // FIXED: Added try-catch and ensured loading stops
   const fetchProfile = async (userId: string) => {
     try {
       const { data, error } = await supabase
@@ -34,7 +33,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .select("*")
         .eq("id", userId)
         .single();
-
       if (error) throw error;
       if (data) setProfile(data as Profile);
     } catch (err) {
@@ -47,39 +45,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    // Initialize session
+    let mounted = true;
+
     const initAuth = async () => {
       try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!mounted) return;
         setSession(session);
-        if (session?.user) {
-          await fetchProfile(session.user.id);
-        }
+        if (session?.user) await fetchProfile(session.user.id);
       } catch (err) {
         console.error("Auth Init Error:", err);
       } finally {
-        // Sabse important: Loading har haal mein false hogi
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     };
 
     initAuth();
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setSession(session);
-      if (session?.user) {
-        await fetchProfile(session.user.id);
-      } else {
-        setProfile(null);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        if (!mounted) return;
+        setSession(session);
+        if (session?.user) {
+          await fetchProfile(session.user.id);
+        } else {
+          setProfile(null);
+        }
+        setLoading(false);
       }
-      setLoading(false);
-    });
+    );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signOut = async () => {
@@ -93,16 +92,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider
-      value={{
-        session,
-        user: session?.user ?? null,
-        profile,
-        loading,
-        signOut,
-        refreshProfile,
-      }}
-    >
+    <AuthContext.Provider value={{ session, user: session?.user ?? null, profile, loading, signOut, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );

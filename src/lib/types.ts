@@ -10,6 +10,7 @@ export interface Profile {
   friend_count: number;
   post_count: number;
   is_online: boolean;
+  is_locked?: boolean;
   created_at: string;
 }
 
@@ -18,6 +19,7 @@ export interface Post {
   user_id: string;
   content: string;
   image_url: string | null;
+  media_url?: string | null;
   likes: number;
   comments: number;
   shares: number;

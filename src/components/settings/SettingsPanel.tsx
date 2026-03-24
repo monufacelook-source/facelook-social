@@ -1,129 +1,161 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Eye, EyeOff, Globe, KeyRound, Shield, LogOut } from "lucide-react";
+import { X, Shield, MapPin, Heart, Volume2, VolumeX, LogOut, Lock } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useToast } from "@/hooks/use-toast";
 
 interface SettingsPanelProps {
-  isOpen: boolean;
   onClose: () => void;
 }
 
-export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
-  const [profileLocked, setProfileLocked] = useState(false);
-  const [hideStatus, setHideStatus] = useState(false);
-  const [lang, setLang] = useState<"en" | "hi">("en");
-  const { signOut } = useAuth();
-  const { toast } = useToast();
+function GlassToggle({
+  value,
+  onChange,
+  testId,
+}: {
+  value: boolean;
+  onChange: (v: boolean) => void;
+  testId?: string;
+}) {
+  return (
+    <button
+      data-testid={testId}
+      onClick={() => onChange(!value)}
+      className={`relative w-13 h-7 rounded-full transition-colors duration-300 flex items-center px-1 shrink-0 ${value ? "bg-gradient-to-r from-[#00F2FE] to-[#9B51E0]" : "bg-white/20 border border-white/30"}`}
+      style={{ minWidth: "52px" }}
+    >
+      <motion.div
+        animate={{ x: value ? 24 : 0 }}
+        transition={{ type: "spring", stiffness: 500, damping: 35 }}
+        className="w-5 h-5 rounded-full bg-white shadow-md"
+      />
+    </button>
+  );
+}
 
-  const labels = {
-    en: { title: "Settings", password: "Reset Password", lock: "Profile Lock", status: "Hide Live Status", language: "Language", signOut: "Sign Out" },
-    hi: { title: "सेटिंग्स", password: "पासवर्ड रीसेट", lock: "प्रोफ़ाइल लॉक", status: "लाइव स्टेटस छुपाएं", language: "भाषा", signOut: "साइन आउट" },
-  };
-  const t = labels[lang];
+function SettingRow({
+  icon: Icon,
+  label,
+  sublabel,
+  value,
+  onChange,
+  color,
+  testId,
+}: {
+  icon: any;
+  label: string;
+  sublabel?: string;
+  value: boolean;
+  onChange: (v: boolean) => void;
+  color: string;
+  testId?: string;
+}) {
+  return (
+    <div className="flex items-center justify-between p-4 bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl">
+      <div className="flex items-center gap-3">
+        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${color}`}>
+          <Icon className="w-5 h-5 text-white" />
+        </div>
+        <div>
+          <p className="text-white font-bold text-sm">{label}</p>
+          {sublabel && <p className="text-white/50 text-[10px]">{sublabel}</p>}
+        </div>
+      </div>
+      <GlassToggle value={value} onChange={onChange} testId={testId} />
+    </div>
+  );
+}
+
+export default function SettingsPanel({ onClose }: SettingsPanelProps) {
+  const [profileLocked, setProfileLocked] = useState(false);
+  const [locationPrivacy, setLocationPrivacy] = useState(false);
+  const [mHeartPrefs, setMHeartPrefs] = useState(true);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const { signOut } = useAuth();
 
   const handleSignOut = async () => {
     await signOut();
-    toast({ title: "Signed out", description: "See you soon! 👋" });
     onClose();
   };
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div
-          className="fixed inset-0 z-50 bg-background overflow-y-auto"
-          initial={{ x: "-100%" }}
-          animate={{ x: 0 }}
-          exit={{ x: "-100%" }}
-          transition={{ type: "spring", stiffness: 200, damping: 28 }}
+    <div className="flex flex-col h-full">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="text-white font-black text-xl italic tracking-tight">Settings</h2>
+          <p className="text-white/50 text-xs">Facelook Privacy & Controls</p>
+        </div>
+        <button
+          data-testid="button-close-settings"
+          onClick={onClose}
+          className="bg-white/10 border border-white/20 p-2 rounded-full"
         >
-          <div className="max-w-lg mx-auto px-5 py-6">
-            <div className="flex items-center gap-3 mb-8">
-              <motion.button onClick={onClose} className="glass w-10 h-10 rounded-full flex items-center justify-center" whileTap={{ scale: 0.9 }}>
-                <ArrowLeft className="w-5 h-5" />
-              </motion.button>
-              <h1 className="font-display text-2xl font-bold gradient-text">{t.title}</h1>
+          <X className="w-5 h-5 text-white" />
+        </button>
+      </div>
+
+      <div className="space-y-3 flex-1 overflow-y-auto">
+        <p className="text-white/40 text-[10px] font-black uppercase tracking-widest px-1">
+          Privacy
+        </p>
+
+        <SettingRow
+          icon={Lock}
+          label="Profile Lock"
+          sublabel="Blur your profile for non-friends"
+          value={profileLocked}
+          onChange={setProfileLocked}
+          color="bg-gradient-to-br from-violet-500 to-purple-700"
+          testId="toggle-profile-lock"
+        />
+
+        <SettingRow
+          icon={MapPin}
+          label="Location Privacy"
+          sublabel="Hide Google Maps tags on posts"
+          value={locationPrivacy}
+          onChange={setLocationPrivacy}
+          color="bg-gradient-to-br from-cyan-400 to-blue-600"
+          testId="toggle-location-privacy"
+        />
+
+        <p className="text-white/40 text-[10px] font-black uppercase tracking-widest px-1 pt-2">
+          Preferences
+        </p>
+
+        <SettingRow
+          icon={Heart}
+          label="M-Heart Matchmaking"
+          sublabel="Show matrimony profiles to you"
+          value={mHeartPrefs}
+          onChange={setMHeartPrefs}
+          color="bg-gradient-to-br from-rose-400 to-red-700"
+          testId="toggle-mheart-prefs"
+        />
+
+        <SettingRow
+          icon={soundEnabled ? Volume2 : VolumeX}
+          label="Sound Effects"
+          sublabel="Tray eject & notification sounds"
+          value={soundEnabled}
+          onChange={setSoundEnabled}
+          color="bg-gradient-to-br from-amber-400 to-orange-600"
+          testId="toggle-sound"
+        />
+
+        <div className="pt-4">
+          <motion.button
+            data-testid="button-signout"
+            onClick={handleSignOut}
+            whileTap={{ scale: 0.97 }}
+            className="w-full p-4 bg-red-500/20 border border-red-400/30 rounded-2xl flex items-center gap-3 text-red-400"
+          >
+            <div className="w-10 h-10 rounded-xl bg-red-500/20 flex items-center justify-center">
+              <LogOut className="w-5 h-5 text-red-400" />
             </div>
-
-            <div className="space-y-3">
-              {/* Password Reset */}
-              <motion.button className="glass-card w-full p-4 flex items-center gap-4 text-left" whileTap={{ scale: 0.98 }}>
-                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                  <KeyRound className="w-5 h-5 text-primary" />
-                </div>
-                <span className="font-medium text-sm">{t.password}</span>
-              </motion.button>
-
-              {/* Profile Lock */}
-              <div className="glass-card p-4 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-secondary/10 flex items-center justify-center">
-                    <Shield className="w-5 h-5 text-secondary" />
-                  </div>
-                  <span className="font-medium text-sm">{t.lock}</span>
-                </div>
-                <button
-                  onClick={() => setProfileLocked(!profileLocked)}
-                  className={`w-12 h-7 rounded-full transition-colors flex items-center px-1 ${profileLocked ? "bg-primary" : "bg-muted"}`}
-                >
-                  <motion.div className="w-5 h-5 rounded-full bg-foreground" animate={{ x: profileLocked ? 18 : 0 }} transition={{ type: "spring", stiffness: 300, damping: 25 }} />
-                </button>
-              </div>
-
-              {/* Hide Status */}
-              <div className="glass-card p-4 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center">
-                    {hideStatus ? <EyeOff className="w-5 h-5 text-accent" /> : <Eye className="w-5 h-5 text-accent" />}
-                  </div>
-                  <span className="font-medium text-sm">{t.status}</span>
-                </div>
-                <button
-                  onClick={() => setHideStatus(!hideStatus)}
-                  className={`w-12 h-7 rounded-full transition-colors flex items-center px-1 ${hideStatus ? "bg-primary" : "bg-muted"}`}
-                >
-                  <motion.div className="w-5 h-5 rounded-full bg-foreground" animate={{ x: hideStatus ? 18 : 0 }} transition={{ type: "spring", stiffness: 300, damping: 25 }} />
-                </button>
-              </div>
-
-              {/* Language */}
-              <div className="glass-card p-4 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                    <Globe className="w-5 h-5 text-primary" />
-                  </div>
-                  <span className="font-medium text-sm">{t.language}</span>
-                </div>
-                <div className="flex gap-1">
-                  {(["en", "hi"] as const).map((l) => (
-                    <button
-                      key={l}
-                      onClick={() => setLang(l)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${lang === l ? "bg-primary text-primary-foreground" : "glass"}`}
-                    >
-                      {l === "en" ? "EN" : "हि"}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Sign Out */}
-              <motion.button
-                onClick={handleSignOut}
-                data-testid="button-signout"
-                className="glass-card w-full p-4 flex items-center gap-4 text-left text-destructive hover:bg-destructive/10 transition-colors"
-                whileTap={{ scale: 0.98 }}
-              >
-                <div className="w-10 h-10 rounded-xl bg-destructive/10 flex items-center justify-center">
-                  <LogOut className="w-5 h-5 text-destructive" />
-                </div>
-                <span className="font-medium text-sm">{t.signOut}</span>
-              </motion.button>
-            </div>
-          </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+            <span className="font-bold text-sm">Sign Out</span>
+          </motion.button>
+        </div>
+      </div>
+    </div>
   );
 }
