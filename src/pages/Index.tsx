@@ -52,6 +52,7 @@ const LUCKY_MESSAGES = [
 const LUCKY_NUMBERS = [3, 7, 9, 11, 21, 27, 33, 42, 55, 77, 99];
 
 function getPersonalizedRashifal(userId: string) {
+  // User ID aur Date ko combine karke unique seed banate hain
   const today = new Date().toISOString().slice(0, 10);
   const seedString = userId + today;
 
@@ -337,9 +338,8 @@ function PowerButton({ icon: Icon, label, color, onClick }: any) {
   );
 }
 
-// ── MAIN INDEX ──
 export default function Index() {
-  const { user, profile, loading } = useAuth(); // 'user' & 'loading' added for security
+  const { profile } = useAuth();
   const [flicksOpen, setFlicksOpen] = useState(false);
   const [storiesOpen, setStoriesOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
@@ -347,13 +347,6 @@ export default function Index() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [alertsOpen, setAlertsOpen] = useState(false);
   const [searchFocus, setSearchFocus] = useState(false);
-
-  // 1. AUTH GUARD: Bina login ke koi enter na kar sake
-  useEffect(() => {
-    if (!loading && !user) {
-      window.location.href = "/auth"; // Apne login route ke hisaab se change karein
-    }
-  }, [user, loading]);
 
   const openFlicks = useCallback(() => {
     playTraySound();
@@ -363,23 +356,6 @@ export default function Index() {
     playTraySound();
     setStoriesOpen(true);
   }, []);
-
-  // 2. POST LOGIC: Button par click karne par action
-  const handlePostAction = () => {
-    alert("Post system active! Photo upload logic yahan connect hoga.");
-  };
-
-  // Loading screen taaki blank page na dikhe
-  if (loading) {
-    return (
-      <div className="h-screen w-screen flex items-center justify-center bg-white">
-        <Zap className="w-10 h-10 text-cyan-500 animate-pulse" />
-      </div>
-    );
-  }
-
-  // User nahi hai to render mat karo (redirect useEffect handle kar lega)
-  if (!user) return null;
 
   return (
     <div className="h-screen w-screen overflow-hidden flex flex-col relative bg-[#f8faff] selection:bg-cyan-100">
@@ -427,6 +403,7 @@ export default function Index() {
         />
         <main className="flex-1 overflow-y-auto no-scrollbar pb-32">
           <div className="pt-4">
+            {/* FIXED: Passing profile for real-time name & unique hash */}
             <RashifalCard profile={profile} />
           </div>
           <HooksSection />
@@ -441,15 +418,7 @@ export default function Index() {
       {/* BOTTOM NAV */}
       <nav className="absolute bottom-0 left-0 right-0 z-[60] h-24 flex items-center justify-around px-6 bg-white/90 backdrop-blur-2xl border-t border-gray-100">
         <PowerButton icon={Heart} label="Heart" color="bg-rose-500" />
-
-        {/* POST BUTTON: Logic attached */}
-        <PowerButton
-          icon={ImagePlus}
-          label="Post"
-          color="bg-cyan-500"
-          onClick={handlePostAction}
-        />
-
+        <PowerButton icon={ImagePlus} label="Post" color="bg-cyan-500" />
         <button
           onClick={() => setProfileOpen(true)}
           className="flex flex-col items-center -mt-10"
@@ -475,8 +444,6 @@ export default function Index() {
       {/* MODALS */}
       <FlicksTray isOpen={flicksOpen} onClose={() => setFlicksOpen(false)} />
       <StoriesTray isOpen={storiesOpen} onClose={() => setStoriesOpen(false)} />
-
-      {/* SETTINGS PANEL: Text color fix */}
       <AnimatePresence>
         {settingsOpen && (
           <motion.div
@@ -485,17 +452,15 @@ export default function Index() {
             exit={{ y: "100%" }}
             className="fixed inset-0 z-[300] bg-white text-gray-900"
           >
-            <div className="h-full w-full overflow-y-auto flex flex-col bg-white">
+            <div className="h-full w-full overflow-y-auto flex flex-col">
               <SettingsPanel onClose={() => setSettingsOpen(false)} />
             </div>
           </motion.div>
         )}
       </AnimatePresence>
-
       <AnimatePresence>
         {profileOpen && <ProfileSection onBack={() => setProfileOpen(false)} />}
       </AnimatePresence>
-
       <AnimatePresence>
         {alertsOpen && (
           <motion.div
@@ -504,7 +469,7 @@ export default function Index() {
             exit={{ y: "100%" }}
             className="fixed inset-0 z-[300] bg-white flex flex-col text-gray-900"
           >
-            <div className="h-16 flex items-center justify-between px-6 border-b shrink-0 bg-white">
+            <div className="h-16 flex items-center justify-between px-6 border-b shrink-0">
               <h2 className="font-black text-gray-900">NOTIFICATIONS</h2>
               <button
                 onClick={() => setAlertsOpen(false)}
@@ -513,7 +478,7 @@ export default function Index() {
                 <X />
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto bg-white">
+            <div className="flex-1 overflow-y-auto">
               <NotificationPanel />
             </div>
           </motion.div>
@@ -526,7 +491,6 @@ export default function Index() {
       >
         <MessageCircle className="w-6 h-6 text-cyan-400" />
       </button>
-
       <AnimatePresence>
         {chatOpen && (
           <motion.div
