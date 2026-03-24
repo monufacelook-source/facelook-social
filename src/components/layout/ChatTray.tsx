@@ -8,6 +8,10 @@ import {
   Crown,
   ShieldAlert,
   Image as ImageIcon,
+  Video,
+  Mic,
+  Music,
+  Edit3, // Pen icon for writing animation
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { formatDistanceToNow } from "date-fns";
@@ -30,14 +34,40 @@ function getOtherParticipantId(conv: any, myId: string) {
     : conv.participant_1_id;
 }
 
-// --- 🛡️ NEW: Number Filter Logic ---
 const filterPhoneNumbers = (text: string, isPremium: boolean) => {
   if (isPremium) return text;
   const phoneRegex = /(?:(?:\+|0{0,2})91[\s-]?)?[6-9]\d{9}/g;
   return text.replace(phoneRegex, " [📵 Number Hidden - Get Premium ₹49] ");
 };
 
-// --- Avatar Component ---
+// --- Modern Writing Indicator ---
+function WritingIndicator() {
+  return (
+    <div className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-2xl w-fit border border-gray-200 shadow-sm">
+      <motion.div
+        animate={{ rotate: [0, -20, 0], x: [0, 2, 0] }}
+        transition={{ repeat: Infinity, duration: 0.6 }}
+        className="text-blue-600"
+      >
+        <Edit3 size={14} />
+      </motion.div>
+      <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+        Writing...
+      </span>
+      <div className="flex gap-1">
+        {[0, 1, 2].map((i) => (
+          <motion.div
+            key={i}
+            animate={{ opacity: [0.3, 1, 0.3] }}
+            transition={{ repeat: Infinity, duration: 0.8, delay: i * 0.2 }}
+            className="w-1 h-1 bg-blue-400 rounded-full"
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function Avatar({
   profile,
   size = 10,
@@ -66,7 +96,7 @@ function Avatar({
   );
 }
 
-// --- Chat View (Individual Conversation) ---
+// --- Chat View ---
 function ChatView({
   conversation,
   onBack,
@@ -78,13 +108,14 @@ function ChatView({
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const [text, setText] = useState("");
-  const [isPremium, setIsPremium] = useState(false); // Default false, fetch from profile later
+  const [isPremium, setIsPremium] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!user) return;
 
-    // Fetch Premium Status
     const checkPremium = async () => {
       const { data } = await supabase
         .from("profiles")
@@ -101,11 +132,9 @@ function ChatView({
         .select("*, profiles(*)")
         .eq("conversation_id", conversation.id)
         .order("created_at", { ascending: true });
-
       setMessages((data as Message[]) ?? []);
       setLoading(false);
 
-      // Mark as Read
       await supabase
         .from("messages")
         .update({ read_at: new Date().toISOString() })
@@ -115,7 +144,6 @@ function ChatView({
     };
     fetchMsgs();
 
-    // Real-time Chat Subscription
     const channel = supabase
       .channel(`chat_${conversation.id}`)
       .on(
@@ -138,6 +166,13 @@ function ChatView({
           }
         },
       )
+      .on("broadcast", { event: "typing" }, ({ payload }) => {
+        if (payload.userId !== user.id) {
+          setIsTyping(payload.typing);
+          // Auto hide indicator after 3s of no signal
+          setTimeout(() => setIsTyping(false), 3000);
+        }
+      })
       .subscribe();
 
     return () => {
@@ -147,42 +182,62 @@ function ChatView({
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, isTyping]);
 
-  const handleSend = async () => {
-    if (!text.trim() || !user) return;
-    const content = text.trim();
+  const sendTypingSignal = (isWriting: boolean) => {
+    supabase.channel(`chat_${conversation.id}`).send({
+      type: "broadcast",
+      event: "typing",
+      payload: { userId: user?.id, typing: isWriting },
+    });
+  };
+
+  const handleSend = async (contentStr?: string, type: string = "text") => {
+    const finalContent = contentStr || text.trim();
+    if (!finalContent || !user) return;
+
     const otherId = getOtherParticipantId(conversation, user.id);
-    setText("");
+    if (!contentStr) setText("");
+    sendTypingSignal(false);
 
-    // Optimistic Update
-    const tempId = Math.random().toString();
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: tempId,
-        content,
-        sender_id: user.id,
-        created_at: new Date().toISOString(),
-      } as any,
-    ]);
+    const tempMsg = {
+      id: Math.random().toString(),
+      content: finalContent,
+      sender_id: user.id,
+      created_at: new Date().toISOString(),
+      metadata: { type },
+    };
+    setMessages((prev) => [...prev, tempMsg as any]);
 
     const { error } = await supabase.from("messages").insert({
       conversation_id: conversation.id,
       sender_id: user.id,
       receiver_id: otherId,
-      content,
+      content: finalContent,
+      metadata: { type },
     });
 
     if (!error) {
       await supabase
         .from("conversations")
         .update({
-          last_message: content,
+          last_message: type === "text" ? finalContent : `Sent a ${type}`,
           last_message_at: new Date().toISOString(),
         })
         .eq("id", conversation.id);
     }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const type = file.type.startsWith("image")
+      ? "image"
+      : file.type.startsWith("video")
+        ? "video"
+        : "audio";
+    // Logic: In production, upload to Supabase Storage first, then send URL
+    handleSend(`[${type}] ${file.name}`, type);
   };
 
   return (
@@ -199,18 +254,13 @@ function ChatView({
           </p>
           <span className="text-[10px] opacity-70">Active Now</span>
         </div>
-        {!isPremium && (
-          <button className="text-[9px] bg-yellow-400 text-black px-2 py-1 rounded-full font-black uppercase">
-            UPGRADE ₹49
-          </button>
-        )}
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50">
         {loading ? (
           <Loader2 className="w-6 h-6 animate-spin mx-auto mt-10 text-blue-600" />
         ) : (
-          messages.map((msg) => (
+          messages.map((msg: any) => (
             <div
               key={msg.id}
               className={`flex ${msg.sender_id === user?.id ? "justify-end" : "justify-start"}`}
@@ -218,8 +268,23 @@ function ChatView({
               <div
                 className={`max-w-[80%] p-3 rounded-2xl text-sm shadow-sm ${msg.sender_id === user?.id ? "bg-blue-600 text-white rounded-tr-none" : "bg-white text-gray-800 rounded-tl-none border"}`}
               >
-                {/* Apply Phone Filter Here */}
-                {filterPhoneNumbers(msg.content, isPremium)}
+                {/* Render Logic for different types */}
+                {msg.metadata?.type === "image" ? (
+                  <div className="rounded-lg overflow-hidden mb-1 bg-black/5">
+                    <ImageIcon className="opacity-20 m-4" />
+                    {msg.content}
+                  </div>
+                ) : msg.metadata?.type === "video" ? (
+                  <div className="flex items-center gap-2 italic opacity-80">
+                    <Video size={14} /> {msg.content}
+                  </div>
+                ) : msg.metadata?.type === "audio" ? (
+                  <div className="flex items-center gap-2 italic opacity-80">
+                    <Mic size={14} /> Voice Message
+                  </div>
+                ) : (
+                  filterPhoneNumbers(msg.content, isPremium)
+                )}
 
                 <div className="flex justify-end items-center gap-1 mt-1 opacity-60 text-[9px]">
                   {formatDistanceToNow(new Date(msg.created_at), {
@@ -233,32 +298,70 @@ function ChatView({
             </div>
           ))
         )}
-        {!isPremium && (
-          <div className="flex items-center gap-2 justify-center py-2 text-gray-400 border-t border-dashed mt-4">
-            <ShieldAlert size={12} />
-            <span className="text-[9px] font-bold uppercase tracking-widest italic">
-              Safety Mode Active
-            </span>
-          </div>
-        )}
+        {isTyping && <WritingIndicator />}
         <div ref={bottomRef} />
       </div>
 
       <div className="p-4 border-t bg-white">
-        <div className="flex items-center gap-2 bg-gray-100 p-2 rounded-full border shadow-inner">
-          <button className="p-2 text-gray-400 hover:text-blue-600">
-            <ImageIcon size={18} />
+        <input
+          type="file"
+          hidden
+          ref={fileInputRef}
+          onChange={handleFileUpload}
+          accept="image/*,video/*,audio/*"
+        />
+        <div className="flex items-center gap-4 mb-3 px-2 overflow-x-auto no-scrollbar">
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="flex flex-col items-center gap-1 group"
+          >
+            <div className="p-2 bg-blue-50 text-blue-600 rounded-xl group-hover:bg-blue-600 group-hover:text-white transition-all">
+              <ImageIcon size={18} />
+            </div>
+            <span className="text-[8px] font-bold text-gray-400">IMG</span>
           </button>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="flex flex-col items-center gap-1 group"
+          >
+            <div className="p-2 bg-purple-50 text-purple-600 rounded-xl group-hover:bg-purple-600 group-hover:text-white transition-all">
+              <Video size={18} />
+            </div>
+            <span className="text-[8px] font-bold text-gray-400">VIDEO</span>
+          </button>
+          <button
+            onClick={() => alert("Recording voice...")}
+            className="flex flex-col items-center gap-1 group"
+          >
+            <div className="p-2 bg-red-50 text-red-600 rounded-xl group-hover:bg-red-600 group-hover:text-white transition-all">
+              <Mic size={18} />
+            </div>
+            <span className="text-[8px] font-bold text-gray-400">VOICE</span>
+          </button>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="flex flex-col items-center gap-1 group"
+          >
+            <div className="p-2 bg-yellow-50 text-yellow-600 rounded-xl group-hover:bg-yellow-600 group-hover:text-white transition-all">
+              <Music size={18} />
+            </div>
+            <span className="text-[8px] font-bold text-gray-400">MP3</span>
+          </button>
+        </div>
+        <div className="flex items-center gap-2 bg-gray-100 p-2 rounded-2xl border shadow-inner">
           <input
             className="flex-1 bg-transparent px-3 outline-none text-sm font-medium"
             value={text}
-            onChange={(e) => setText(e.target.value)}
+            onChange={(e) => {
+              setText(e.target.value);
+              sendTypingSignal(true);
+            }}
             onKeyDown={(e) => e.key === "Enter" && handleSend()}
-            placeholder="Type a message..."
+            placeholder="Write something..."
           />
           <button
-            onClick={handleSend}
-            className="bg-blue-600 p-2 rounded-full text-white active:scale-90 transition-transform shadow-lg shadow-blue-200"
+            onClick={() => handleSend()}
+            className="bg-blue-600 p-2.5 rounded-xl text-white active:scale-95 transition-all shadow-md shadow-blue-200"
           >
             <Send className="w-4 h-4" />
           </button>
@@ -268,7 +371,7 @@ function ChatView({
   );
 }
 
-// --- Main ChatTray Component ---
+// --- Main Tray ---
 export default function ChatTray({ isOpen, onClose }: ChatTrayProps) {
   const { user } = useAuth();
   const [view, setView] = useState<TrayView>("list");
@@ -287,7 +390,6 @@ export default function ChatTray({ isOpen, onClose }: ChatTrayProps) {
       .select("*")
       .or(`participant_1_id.eq.${user.id},participant_2_id.eq.${user.id}`)
       .order("last_message_at", { ascending: false });
-
     if (!convs) {
       setLoading(false);
       return;
@@ -314,7 +416,6 @@ export default function ChatTray({ isOpen, onClose }: ChatTrayProps) {
             `and(requester_id.eq.${user.id},addressee_id.eq.${otherId}),and(requester_id.eq.${otherId},addressee_id.eq.${user.id})`,
           )
           .maybeSingle();
-
         return {
           ...c,
           other_profile: profile,
@@ -323,13 +424,25 @@ export default function ChatTray({ isOpen, onClose }: ChatTrayProps) {
         };
       }),
     );
-
     setConversations(enriched);
     setLoading(false);
   };
 
   useEffect(() => {
-    if (isOpen) loadConversations();
+    if (isOpen) {
+      loadConversations();
+      const channel = supabase
+        .channel("convos")
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "conversations" },
+          () => loadConversations(),
+        )
+        .subscribe();
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
   }, [isOpen]);
 
   const filteredConvs = conversations.filter((c) =>
@@ -345,7 +458,7 @@ export default function ChatTray({ isOpen, onClose }: ChatTrayProps) {
           animate={{ x: 0 }}
           exit={{ x: "100%" }}
           transition={{ type: "spring", damping: 25, stiffness: 200 }}
-          className="fixed top-0 right-0 bottom-0 w-full sm:w-[380px] z-[300] bg-white shadow-2xl flex flex-col"
+          className="fixed top-0 right-0 bottom-0 w-full sm:w-[380px] z-[300] bg-white shadow-2xl flex flex-col border-l"
         >
           {view === "list" ? (
             <div className="flex flex-col h-full">
@@ -407,7 +520,7 @@ export default function ChatTray({ isOpen, onClose }: ChatTrayProps) {
                         </p>
                       </div>
                       {conv.unread_count > 0 && (
-                        <div className="w-2.5 h-2.5 bg-blue-600 rounded-full"></div>
+                        <div className="w-2.5 h-2.5 bg-blue-600 rounded-full animate-pulse"></div>
                       )}
                     </div>
                   ))

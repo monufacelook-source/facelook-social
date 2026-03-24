@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Settings,
   User,
@@ -12,28 +12,79 @@ import {
   Bookmark,
   Zap,
   Flame,
-  Search, // 👈 New
+  Search,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { supabase } from "@/lib/supabase"; // Real-time notification logic ke liye
+import { useAuth } from "@/contexts/AuthContext"; // Current user id ke liye
 import FlicksTray from "@/components/layout/FlicksTray";
 import ChatTray from "@/components/layout/ChatTray";
 import MainFeed from "@/components/feed/MainFeed";
 import ProfileSection from "@/components/profile/ProfileSection";
 import SettingsPanel from "@/components/settings/SettingsPanel";
-import SearchUsers from "@/components/SearchUsers"; // 👈 New
-import NotificationPanel from "@/components/NotificationPanel"; // 👈 New
+import SearchUsers from "@/components/SearchUsers";
+import NotificationPanel from "@/components/NotificationPanel";
+import FriendListOverlay from "@/components/FriendListOverlay"; // 👈 Nayi file hum agle step me banayenge
 
 export default function Index() {
+  const { user } = useAuth();
   const [flicksOpen, setFlicksOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false); // 👈 New
-  const [alertsOpen, setAlertsOpen] = useState(false); // 👈 New
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [alertsOpen, setAlertsOpen] = useState(false);
+  const [friendsListOpen, setFriendsListOpen] = useState(false); // 👈 Management ke liye
 
+  // --- NOTIFICATION & SOUND LOGIC ---
+  const [notifCount, setNotifCount] = useState(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+
+    // 1. Initial Notification Count Fetch
+    const fetchNotifCount = async () => {
+      const { count } = await supabase
+        .from("friendships")
+        .select("*", { count: "exact", head: true })
+        .eq("addressee_id", user.id)
+        .eq("status", "pending");
+      setNotifCount(count || 0);
+    };
+
+    fetchNotifCount();
+
+    // 2. Real-time Subscription for New Notifications
+    const channel = supabase
+      .channel("schema-db-changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "friendships",
+          filter: `addressee_id=eq.${user.id}`,
+        },
+        (payload) => {
+          setNotifCount((prev) => prev + 1);
+          if (audioRef.current) {
+            audioRef.current
+              .play()
+              .catch((e) => console.log("Sound error:", e));
+          }
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
+  // Matchmaking & UI states
   const [matchIdx, setMatchIdx] = useState(0);
   const petals = Array.from({ length: 15 });
-
   const grooms = [
     "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400",
     "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400",
@@ -61,13 +112,19 @@ export default function Index() {
 
   return (
     <div className="h-screen w-screen bg-[#d1dbd3] overflow-hidden flex flex-col relative selection:bg-green-200 font-sans">
+      {/* 🔊 Hidden Audio Element for Notification */}
+      <audio
+        ref={audioRef}
+        src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3"
+        preload="auto"
+      />
+
       {/* --- HEADER --- */}
       <header className="h-14 bg-white/60 backdrop-blur-xl border-b border-green-200/50 z-[60] flex items-center justify-between px-6 shrink-0">
         <h1 className="text-2xl font-black tracking-tighter text-blue-600 select-none italic">
           FACELOOK
         </h1>
         <div className="flex items-center gap-2">
-          {/* 🔥 SEARCH ICON ADDED TO HEADER */}
           <button
             onClick={() => setSearchOpen(true)}
             className="p-2 hover:bg-green-100 rounded-full transition-all"
@@ -84,7 +141,6 @@ export default function Index() {
       </header>
 
       <div className="flex flex-1 overflow-hidden relative">
-        {/* --- LEFT TRAY (FLICKS) --- */}
         <motion.div
           onClick={() => setFlicksOpen(true)}
           className="absolute left-0 top-1/2 -translate-y-1/2 z-[50] bg-black text-white w-9 h-40 rounded-r-2xl flex items-center justify-center cursor-pointer shadow-2xl border border-white/10"
@@ -95,10 +151,9 @@ export default function Index() {
           </span>
         </motion.div>
 
-        {/* --- MAIN CONTENT AREA --- */}
         <main className="flex-1 overflow-y-auto no-scrollbar pb-32">
           <div className="max-w-[620px] mx-auto py-6 space-y-10">
-            {/* VIRAL ON FACELOOK */}
+            {/* Viral Section */}
             <section className="px-4">
               <div className="flex items-center gap-2 mb-4">
                 <Flame className="w-5 h-5 text-orange-500 fill-orange-500" />
@@ -117,9 +172,7 @@ export default function Index() {
                         Trending
                       </span>
                       <p className="text-white font-black text-lg leading-tight mt-3">
-                        The New Era of
-                        <br />
-                        Social Matchmaking
+                        The New Era of <br /> Social Matchmaking
                       </p>
                     </div>
                     <div className="absolute right-[-20px] bottom-[-20px] opacity-20">
@@ -130,7 +183,7 @@ export default function Index() {
               </div>
             </section>
 
-            {/* HOOK REQUESTS */}
+            {/* Hook Requests */}
             <section className="space-y-4 px-4">
               <h3 className="text-[11px] font-black text-green-800 tracking-[3px] uppercase px-1">
                 Hook Requests
@@ -161,7 +214,7 @@ export default function Index() {
               </div>
             </section>
 
-            {/* VELVET RED MATRIMONY */}
+            {/* Matrimony */}
             <section className="bg-[#2d0202] rounded-[3.5rem] shadow-2xl overflow-hidden border-b-[6px] border-red-900 relative min-h-[440px] mx-4">
               <div className="absolute inset-0 pointer-events-none z-10">
                 {petals.map((_, i) => (
@@ -213,14 +266,12 @@ export default function Index() {
               </div>
             </section>
 
-            {/* MAIN FEED */}
             <div className="px-0">
               <MainFeed />
             </div>
           </div>
         </main>
 
-        {/* --- RIGHT TRAY (F-CHAT) --- */}
         <motion.div
           onClick={() => setChatOpen(true)}
           className="absolute right-0 top-1/2 -translate-y-1/2 z-[50] bg-blue-600 text-white w-9 h-40 rounded-l-2xl flex items-center justify-center cursor-pointer shadow-2xl"
@@ -255,16 +306,30 @@ export default function Index() {
         >
           <User className="w-8 h-8" />
         </div>
-        {/* 🔔 ALERTS BUTTON ACTIVATED */}
+
+        {/* 🔔 ALERTS WITH BADGE COUNT */}
         <button
-          onClick={() => setAlertsOpen(true)}
-          className="flex flex-col items-center gap-1"
+          onClick={() => {
+            setAlertsOpen(true);
+            setNotifCount(0);
+          }}
+          className="flex flex-col items-center gap-1 relative"
         >
           <Bell className="w-6 h-6 text-green-900/40" />
           <span className="text-[7px] font-black uppercase text-green-900/40">
             Alerts
           </span>
+          {notifCount > 0 && (
+            <motion.span
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              className="absolute -top-1 -right-1 bg-red-600 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center border border-white"
+            >
+              {notifCount}
+            </motion.span>
+          )}
         </button>
+
         <button className="flex flex-col items-center gap-1">
           <Bookmark className="w-6 h-6 text-green-900/40" />
           <span className="text-[7px] font-black uppercase text-green-900/40">
@@ -273,13 +338,13 @@ export default function Index() {
         </button>
       </nav>
 
-      {/* FULL SCREEN SEARCH OVERLAY (NEW) */}
+      {/* FULL SCREEN SEARCH OVERLAY */}
       <AnimatePresence>
         {searchOpen && (
           <motion.div
-            initial={{ opacity: 0, scale: 1.1 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 1.1 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             className="fixed inset-0 z-[250] bg-white/95 backdrop-blur-2xl flex flex-col p-6"
           >
             <div className="flex justify-end mb-4">
@@ -287,7 +352,7 @@ export default function Index() {
                 onClick={() => setSearchOpen(false)}
                 className="p-2 bg-black/5 rounded-full"
               >
-                <X className="w-6 h-6" />
+                <X className="w-6 h-6 text-black" />
               </button>
             </div>
             <div className="flex-1 max-w-md mx-auto w-full">
@@ -300,14 +365,13 @@ export default function Index() {
         )}
       </AnimatePresence>
 
-      {/* FULL SCREEN ALERTS OVERLAY (NEW) */}
+      {/* FULL SCREEN ALERTS OVERLAY */}
       <AnimatePresence>
         {alertsOpen && (
           <motion.div
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
-            transition={{ type: "spring", damping: 25 }}
             className="fixed inset-0 z-[250] bg-white flex flex-col"
           >
             <div className="h-16 bg-green-900 flex items-center justify-between px-6 text-white shrink-0">
@@ -331,23 +395,19 @@ export default function Index() {
         )}
       </AnimatePresence>
 
-      {/* FULL SCREEN F-CHAT OVERLAY */}
+      {/* CHAT & FLICKS OVERLAYS */}
       <AnimatePresence>
         {chatOpen && (
           <motion.div
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
-            transition={{ type: "spring", damping: 25 }}
             className="fixed inset-0 z-[200] bg-white flex flex-col"
           >
             <div className="h-16 bg-blue-600 flex items-center justify-between px-6 text-white shrink-0">
-              <div className="flex items-center gap-3">
-                <span className="text-xl">🩴</span>
-                <h2 className="font-black tracking-[5px] uppercase text-sm">
-                  F-CHAT
-                </h2>
-              </div>
+              <h2 className="font-black tracking-[5px] uppercase text-sm italic">
+                F-CHAT 🩴
+              </h2>
               <button
                 onClick={() => setChatOpen(false)}
                 className="bg-white/20 p-2 rounded-full"
@@ -360,22 +420,9 @@ export default function Index() {
             </div>
           </motion.div>
         )}
-        {flicksOpen && (
-          <motion.div
-            initial={{ x: "-100%" }}
-            animate={{ x: 0 }}
-            exit={{ x: "-100%" }}
-            transition={{ type: "spring", damping: 25 }}
-            className="fixed inset-0 z-[200] bg-black"
-          >
-            <FlicksTray
-              isOpen={flicksOpen}
-              onClose={() => setFlicksOpen(false)}
-            />
-          </motion.div>
-        )}
       </AnimatePresence>
 
+      {/* SETTINGS, PROFILE & FRIEND LIST OVERLAYS */}
       <AnimatePresence>
         {settingsOpen && (
           <div className="fixed inset-0 z-[210]">
@@ -392,6 +439,10 @@ export default function Index() {
               <SettingsPanel
                 isOpen={true}
                 onClose={() => setSettingsOpen(false)}
+                onManageFriends={() => {
+                  setSettingsOpen(false);
+                  setFriendsListOpen(true);
+                }}
               />
             </motion.div>
           </div>
@@ -400,6 +451,20 @@ export default function Index() {
 
       <AnimatePresence>
         {profileOpen && <ProfileSection onBack={() => setProfileOpen(false)} />}
+      </AnimatePresence>
+
+      {/* NEW: FRIEND MANAGEMENT OVERLAY */}
+      <AnimatePresence>
+        {friendsListOpen && (
+          <motion.div
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            className="fixed inset-0 z-[300] bg-white"
+          >
+            <FriendListOverlay onClose={() => setFriendsListOpen(false)} />
+          </motion.div>
+        )}
       </AnimatePresence>
     </div>
   );
