@@ -42,10 +42,10 @@ export default function MainFeed() {
   });
 
   return (
-    <div className="flex-1 overflow-y-auto pb-20 pt-16 px-4 feed-gradient">
+    <div className="px-4 pb-4">
       <div className="max-w-lg mx-auto space-y-4">
         <motion.h1
-          className="font-display text-2xl font-bold gradient-text py-4"
+          className="font-display text-xl font-bold gradient-text pt-1 pb-2"
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
