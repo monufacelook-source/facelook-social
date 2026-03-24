@@ -13,11 +13,15 @@ import {
   Zap,
   Flame,
   Search,
+  Share2,
+  Heart,
+  MessageCircle,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
-import FlicksTray from "@/components/layout/FlicksTray";
+
+// --- EXTERNAL COMPONENTS ---
 import ChatTray from "@/components/layout/ChatTray";
 import MainFeed from "@/components/feed/MainFeed";
 import ProfileSection from "@/components/profile/ProfileSection";
@@ -26,8 +30,158 @@ import SearchUsers from "@/components/SearchUsers";
 import NotificationPanel from "@/components/NotificationPanel";
 import FriendListOverlay from "@/components/FriendListOverlay";
 
+// ==========================================
+// 1. FLICKS TRAY (THE REELS COMPONENT)
+// ==========================================
+function FlicksTray({
+  isOpen,
+  onClose,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+}) {
+  const [flicks, setFlicks] = useState<any[]>([]);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const fetchFlicks = async () => {
+      const { data, error } = await supabase
+        .from("flicks")
+        .select(`*, profiles(username, avatar_url)`)
+        .order("created_at", { ascending: false });
+      if (data) setFlicks(data);
+      if (error) console.error("Error fetching flicks:", error);
+    };
+    if (isOpen) fetchFlicks();
+  }, [isOpen]);
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={{ x: "-100%" }}
+          animate={{ x: 0 }}
+          exit={{ x: "-100%" }}
+          transition={{ type: "spring", damping: 25, stiffness: 200 }}
+          className="fixed inset-0 z-[500] bg-black flex flex-col"
+        >
+          {/* Flicks Header */}
+          <div className="absolute top-0 w-full p-6 flex justify-between items-center z-[510] bg-gradient-to-b from-black/80 to-transparent">
+            <h2 className="text-white font-black italic tracking-[4px] text-lg">
+              FLICKS 📀
+            </h2>
+            <button
+              onClick={onClose}
+              className="p-2 bg-white/10 backdrop-blur-lg rounded-full text-white border border-white/20 active:scale-90 transition-all"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+
+          {/* Insta-Style Snap Scroller */}
+          <div
+            ref={containerRef}
+            className="flex-1 overflow-y-auto no-scrollbar snap-y snap-mandatory scroll-smooth bg-black"
+          >
+            {flicks.length > 0 ? (
+              flicks.map((flick, index) => (
+                <div
+                  key={flick.id || index}
+                  className="h-screen w-full snap-start relative flex items-center justify-center overflow-hidden"
+                >
+                  <video
+                    src={flick.video_url}
+                    className="h-full w-full object-cover"
+                    loop
+                    autoPlay={index === 0}
+                    muted
+                    playsInline
+                  />
+
+                  {/* Right Actions Bar */}
+                  <div className="absolute right-4 bottom-32 flex flex-col gap-7 z-[505]">
+                    <motion.div
+                      whileTap={{ scale: 0.8 }}
+                      className="flex flex-col items-center gap-1 cursor-pointer"
+                    >
+                      <div className="p-3.5 bg-black/20 backdrop-blur-xl rounded-full text-white border border-white/10">
+                        <Heart className="w-6 h-6 fill-white" />
+                      </div>
+                      <span className="text-[10px] text-white font-black">
+                        LIT
+                      </span>
+                    </motion.div>
+
+                    <motion.div
+                      whileTap={{ scale: 0.8 }}
+                      className="flex flex-col items-center gap-1 cursor-pointer"
+                    >
+                      <div className="p-3.5 bg-blue-600/40 backdrop-blur-xl rounded-full text-white border border-blue-400/30">
+                        <Zap className="w-6 h-6 text-yellow-400 fill-yellow-400" />
+                      </div>
+                      <span className="text-[10px] text-white font-black">
+                        HOOK
+                      </span>
+                    </motion.div>
+
+                    <motion.div
+                      whileTap={{ scale: 0.8 }}
+                      className="flex flex-col items-center gap-1 cursor-pointer"
+                    >
+                      <div className="p-3.5 bg-black/20 backdrop-blur-xl rounded-full text-white border border-white/10">
+                        <Share2 className="w-6 h-6" />
+                      </div>
+                      <span className="text-[10px] text-white font-black">
+                        SEND
+                      </span>
+                    </motion.div>
+                  </div>
+
+                  {/* Info Overlay */}
+                  <div className="absolute bottom-12 left-6 right-20 z-[505]">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-11 h-11 rounded-full border-2 border-blue-500 p-0.5 bg-black overflow-hidden">
+                        <img
+                          src={
+                            flick.profiles?.avatar_url ||
+                            `https://api.dicebear.com/7.x/avataaars/svg?seed=${index}`
+                          }
+                          className="w-full h-full rounded-full object-cover"
+                        />
+                      </div>
+                      <p className="text-white font-black text-sm tracking-widest uppercase italic">
+                        @{flick.profiles?.username || "facelooker"}
+                      </p>
+                    </div>
+                    <p className="text-white/90 text-xs font-medium leading-relaxed max-w-[85%] drop-shadow-lg">
+                      {flick.caption ||
+                        "No caption provided. Just Vibe! ⚡ #Facelook #Flicks"}
+                    </p>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center text-white/30 gap-5">
+                <Film className="w-16 h-16 animate-pulse text-blue-600" />
+                <p className="font-black text-[10px] uppercase tracking-[4px]">
+                  Fetching Viral Flicks...
+                </p>
+              </div>
+            )}
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+// ==========================================
+// 2. MAIN INDEX PAGE
+// ==========================================
 export default function Index() {
   const { user } = useAuth();
+
+  // Navigation States
   const [flicksOpen, setFlicksOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -36,7 +190,7 @@ export default function Index() {
   const [alertsOpen, setAlertsOpen] = useState(false);
   const [friendsListOpen, setFriendsListOpen] = useState(false);
 
-  // --- NOTIFICATION & SOUND LOGIC ---
+  // Notification Logic
   const [notifCount, setNotifCount] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -55,7 +209,7 @@ export default function Index() {
     fetchNotifCount();
 
     const channel = supabase
-      .channel("schema-db-changes")
+      .channel("realtime-notifications")
       .on(
         "postgres_changes",
         {
@@ -64,13 +218,11 @@ export default function Index() {
           table: "friendships",
           filter: `addressee_id=eq.${user.id}`,
         },
-        (payload) => {
+        () => {
           setNotifCount((prev) => prev + 1);
-          if (audioRef.current) {
-            audioRef.current
-              .play()
-              .catch((e) => console.log("Sound error:", e));
-          }
+          audioRef.current
+            ?.play()
+            .catch((e) => console.log("Audio Play Blocked", e));
         },
       )
       .subscribe();
@@ -80,36 +232,27 @@ export default function Index() {
     };
   }, [user]);
 
-  // Matchmaking & UI states
+  // Matchmaking Demo
   const [matchIdx, setMatchIdx] = useState(0);
-  const petals = Array.from({ length: 15 });
+  const petals = Array.from({ length: 12 });
   const grooms = [
     "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400",
     "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400",
-    "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400",
   ];
   const brides = [
     "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400",
     "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400",
-    "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=400",
   ];
 
   useEffect(() => {
     const interval = setInterval(() => {
       setMatchIdx((prev) => (prev + 1) % grooms.length);
-    }, 3000);
+    }, 4000);
     return () => clearInterval(interval);
   }, []);
 
-  const realUsers = [
-    "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=400",
-    "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400",
-    "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400",
-    "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400",
-  ];
-
   return (
-    <div className="h-screen w-screen bg-[#d1dbd3] overflow-hidden flex flex-col relative selection:bg-green-200 font-sans">
+    <div className="h-screen w-screen bg-[#d1dbd3] overflow-hidden flex flex-col relative font-sans selection:bg-blue-200">
       <audio
         ref={audioRef}
         src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3"
@@ -117,20 +260,20 @@ export default function Index() {
       />
 
       {/* --- HEADER --- */}
-      <header className="h-14 bg-white/60 backdrop-blur-xl border-b border-green-200/50 z-[60] flex items-center justify-between px-6 shrink-0">
+      <header className="h-14 bg-white/70 backdrop-blur-2xl border-b border-green-200/50 z-[60] flex items-center justify-between px-6 shrink-0">
         <h1 className="text-2xl font-black tracking-tighter text-blue-600 select-none italic">
           FACELOOK
         </h1>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <button
             onClick={() => setSearchOpen(true)}
-            className="p-2 hover:bg-green-100 rounded-full transition-all"
+            className="p-2 hover:bg-green-100 rounded-full transition-colors"
           >
             <Search className="w-5 h-5 text-green-700" />
           </button>
           <button
             onClick={() => setSettingsOpen(true)}
-            className="p-2 hover:bg-green-100 rounded-full transition-all"
+            className="p-2 hover:bg-green-100 rounded-full transition-colors"
           >
             <Settings className="w-5 h-5 text-green-700" />
           </button>
@@ -138,185 +281,148 @@ export default function Index() {
       </header>
 
       <div className="flex flex-1 overflow-hidden relative">
-        {/* --- FLICKS SIDE BUTTON --- */}
+        {/* --- LEFT TRIGGER (FLICKS) --- */}
         <motion.div
           onClick={() => setFlicksOpen(true)}
-          className="absolute left-0 top-1/2 -translate-y-1/2 z-[50] bg-black/10 backdrop-blur-md text-black/70 w-7 h-32 rounded-r-2xl flex items-center justify-center cursor-pointer border border-white/20 shadow-xl"
+          className="absolute left-0 top-1/2 -translate-y-1/2 z-[50] bg-black/10 backdrop-blur-xl text-black/70 w-8 h-36 rounded-r-[2rem] flex items-center justify-center cursor-pointer border border-white/30 shadow-2xl"
           whileHover={{
-            width: "35px",
+            width: "45px",
             backgroundColor: "rgba(0,0,0,0.2)",
             color: "#000",
           }}
-          whileTap={{ scale: 0.95 }}
+          whileTap={{ scale: 0.9 }}
         >
-          <span className="uppercase font-black text-[9px] tracking-[2px] [writing-mode:vertical-rl] rotate-180">
+          <span className="uppercase font-black text-[10px] tracking-[4px] [writing-mode:vertical-rl] rotate-180">
             FLICKS 📀
           </span>
         </motion.div>
 
-        {/* --- MAIN CONTENT AREA WITH SNAP SCROLLING --- */}
+        {/* --- MAIN FEED (SNAP ENABLED) --- */}
         <main className="flex-1 overflow-y-auto no-scrollbar pb-32 snap-y snap-mandatory scroll-smooth">
-          <div className="max-w-[620px] mx-auto py-6 space-y-10">
-            {/* Viral Section */}
+          <div className="max-w-[640px] mx-auto py-8 space-y-12">
+            {/* Viral Snap Section */}
             <section className="px-4 snap-start">
-              <div className="flex items-center gap-2 mb-4">
-                <Flame className="w-5 h-5 text-orange-500 fill-orange-500" />
-                <h3 className="text-[11px] font-black text-green-900 tracking-[3px] uppercase italic">
-                  Viral on Facelook
+              <div className="flex items-center gap-2 mb-6">
+                <Flame className="w-6 h-6 text-orange-500 fill-orange-500 animate-pulse" />
+                <h3 className="text-[12px] font-black text-green-900 tracking-[4px] uppercase italic">
+                  Viral Now
                 </h3>
               </div>
-              <div className="flex gap-3 overflow-x-auto no-scrollbar">
+              <div className="flex gap-4 overflow-x-auto no-scrollbar">
                 {[1, 2, 3].map((v) => (
                   <div
                     key={v}
-                    className="min-w-[280px] h-[160px] bg-gradient-to-br from-blue-600 to-indigo-800 rounded-[2rem] p-5 relative overflow-hidden shadow-xl border border-white/20"
+                    className="min-w-[300px] h-[180px] bg-gradient-to-br from-blue-700 to-indigo-900 rounded-[2.5rem] p-6 relative overflow-hidden shadow-2xl border border-white/20"
                   >
                     <div className="relative z-10">
-                      <span className="bg-white/20 text-white text-[8px] font-bold px-3 py-1 rounded-full uppercase">
+                      <span className="bg-white/20 text-white text-[9px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest">
                         Trending
                       </span>
-                      <p className="text-white font-black text-lg leading-tight mt-3">
-                        The New Era of <br /> Social Matchmaking
+                      <p className="text-white font-black text-xl leading-tight mt-4 italic">
+                        Next-Gen <br /> Social Hooks
                       </p>
                     </div>
-                    <div className="absolute right-[-20px] bottom-[-20px] opacity-20">
-                      <Film className="w-32 h-32 text-white" />
-                    </div>
+                    <Film className="absolute right-[-10px] bottom-[-10px] w-32 h-32 text-white/10 rotate-12" />
                   </div>
                 ))}
               </div>
             </section>
 
-            {/* Hook Requests */}
-            <section className="space-y-4 px-4 snap-start">
-              <h3 className="text-[11px] font-black text-green-800 tracking-[3px] uppercase px-1">
-                Hook Requests
-              </h3>
-              <div className="flex gap-4 overflow-x-auto no-scrollbar">
-                {realUsers.map((url, i) => (
-                  <motion.div
-                    key={i}
-                    whileHover={{ y: -5 }}
-                    className="min-w-[140px] h-[190px] relative rounded-3xl overflow-hidden shadow-2xl shrink-0"
-                  >
-                    <img
-                      src={url}
-                      className="w-full h-full object-cover"
-                      alt="user"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent" />
-                    <div className="absolute bottom-3 w-full flex justify-center gap-2">
-                      <button className="bg-blue-600 p-2 rounded-xl text-white shadow-lg">
-                        <Check className="w-3 h-3" />
-                      </button>
-                      <button className="bg-white/20 p-2 rounded-xl text-white backdrop-blur-md">
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </section>
-
-            {/* Matrimony */}
-            <section className="bg-[#2d0202] rounded-[3.5rem] shadow-2xl overflow-hidden border-b-[6px] border-red-900 relative min-h-[440px] mx-4 snap-start">
+            {/* Matrimony Snap Section */}
+            <section className="bg-[#2a0101] rounded-[4rem] shadow-2xl overflow-hidden border-b-[8px] border-red-900 relative min-h-[460px] mx-4 snap-start flex flex-col items-center justify-center">
               <div className="absolute inset-0 pointer-events-none z-10">
                 {petals.map((_, i) => (
                   <motion.div
                     key={i}
                     animate={{ y: [0, 500], opacity: [0, 1, 0] }}
                     transition={{
-                      duration: 6,
+                      duration: 7,
                       repeat: Infinity,
-                      delay: i * 0.4,
+                      delay: i * 0.5,
                     }}
                     className="absolute text-red-500/20 text-xl"
-                    style={{ left: `${(i * 7) % 100}%` }}
+                    style={{ left: `${(i * 9) % 100}%` }}
                   >
                     🌹
                   </motion.div>
                 ))}
               </div>
-              <div className="px-8 py-10 flex flex-col items-center relative z-20">
-                <HeartIcon className="w-6 h-6 text-red-600 fill-red-600 animate-pulse mb-8" />
-                <div className="flex items-center justify-around w-full">
-                  <AnimatePresence mode="wait">
-                    <motion.img
-                      key={matchIdx + "g"}
-                      initial={{ scale: 0.8, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      exit={{ scale: 0.8, opacity: 0 }}
-                      src={grooms[matchIdx]}
-                      className="w-28 h-36 rounded-2xl object-cover border-2 border-red-800 rotate-[-4deg]"
-                    />
-                  </AnimatePresence>
-                  <div className="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center border-4 border-[#2d0202] z-30 shadow-xl">
-                    <span className="text-white font-black italic">VS</span>
-                  </div>
-                  <AnimatePresence mode="wait">
-                    <motion.img
-                      key={matchIdx + "b"}
-                      initial={{ scale: 0.8, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      exit={{ scale: 0.8, opacity: 0 }}
-                      src={brides[matchIdx]}
-                      className="w-28 h-36 rounded-2xl object-cover border-2 border-red-800 rotate-[4deg]"
-                    />
-                  </AnimatePresence>
+              <HeartIcon className="w-8 h-8 text-red-600 fill-red-600 animate-pulse mb-10 z-20" />
+              <div className="flex items-center justify-around w-full z-20 px-4">
+                <motion.img
+                  key={matchIdx + "g"}
+                  initial={{ x: -20, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  src={grooms[matchIdx]}
+                  className="w-28 h-40 rounded-3xl object-cover border-4 border-red-900/50 shadow-2xl rotate-[-5deg]"
+                />
+                <div className="w-14 h-14 bg-red-600 rounded-full flex items-center justify-center border-4 border-[#2a0101] shadow-pink-500/20 shadow-2xl">
+                  <span className="text-white font-black italic text-lg">
+                    VS
+                  </span>
                 </div>
-                <button className="mt-10 bg-white text-red-900 px-10 py-3 rounded-full text-[10px] font-black uppercase tracking-[3px] shadow-2xl">
-                  Get Matched
-                </button>
+                <motion.img
+                  key={matchIdx + "b"}
+                  initial={{ x: 20, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  src={brides[matchIdx]}
+                  className="w-28 h-40 rounded-3xl object-cover border-4 border-red-900/50 shadow-2xl rotate-[5deg]"
+                />
               </div>
+              <button className="z-20 mt-12 bg-white text-red-950 px-12 py-4 rounded-full text-[11px] font-black uppercase tracking-[4px] shadow-2xl active:scale-95 transition-transform">
+                Find Soulmate
+              </button>
             </section>
 
+            {/* Main Feed Snap Section */}
             <div className="px-0 snap-start">
               <MainFeed />
             </div>
           </div>
         </main>
 
-        {/* --- VIBE SIDE BUTTON --- */}
+        {/* --- RIGHT TRIGGER (VIBE) --- */}
         <motion.div
           onClick={() => setChatOpen(true)}
-          className="absolute right-0 top-1/2 -translate-y-1/2 z-[50] bg-blue-600/10 backdrop-blur-md text-blue-700/70 w-7 h-32 rounded-l-2xl flex items-center justify-center cursor-pointer border border-blue-200/20 shadow-xl"
+          className="absolute right-0 top-1/2 -translate-y-1/2 z-[50] bg-blue-600/10 backdrop-blur-xl text-blue-800/70 w-8 h-36 rounded-l-[2rem] flex items-center justify-center cursor-pointer border border-blue-200/30 shadow-2xl"
           whileHover={{
-            width: "35px",
+            width: "45px",
             backgroundColor: "rgba(37, 99, 235, 0.2)",
-            color: "#2563eb",
+            color: "#1e40af",
           }}
-          whileTap={{ scale: 0.95 }}
+          whileTap={{ scale: 0.9 }}
         >
-          <span className="uppercase font-black text-[9px] tracking-[3px] [writing-mode:vertical-rl]">
+          <span className="uppercase font-black text-[10px] tracking-[4px] [writing-mode:vertical-rl]">
             VIBE ⚡
           </span>
         </motion.div>
       </div>
 
       {/* --- BOTTOM NAV --- */}
-      <nav className="h-20 bg-white/80 backdrop-blur-lg border-t border-green-200 fixed bottom-0 left-0 right-0 z-[60] flex items-center justify-around">
+      <nav className="h-20 bg-white/90 backdrop-blur-2xl border-t border-green-200/60 fixed bottom-0 left-0 right-0 z-[100] flex items-center justify-around px-2">
         <button
           onClick={() => setFlicksOpen(true)}
-          className="flex flex-col items-center gap-1 group"
+          className="flex flex-col items-center gap-1.5 group"
         >
           <Film
-            className={`w-6 h-6 ${flicksOpen ? "text-blue-600" : "text-green-900/40"} group-active:scale-125 transition-transform`}
+            className={`w-6 h-6 transition-all ${flicksOpen ? "text-blue-600 scale-110" : "text-green-900/40 group-active:scale-90"}`}
           />
           <span
-            className={`text-[7px] font-black uppercase ${flicksOpen ? "text-blue-600" : "text-green-900/40"}`}
+            className={`text-[8px] font-black uppercase tracking-wider ${flicksOpen ? "text-blue-600" : "text-green-900/40"}`}
           >
             Flicks
           </span>
         </button>
-        <button className="flex flex-col items-center gap-1">
-          <Users className="w-6 h-6 text-green-900/40" />
-          <span className="text-[7px] font-black uppercase text-green-900/40">
+        <button className="flex flex-col items-center gap-1.5 opacity-40">
+          <Users className="w-6 h-6" />
+          <span className="text-[8px] font-black uppercase tracking-wider">
             Groups
           </span>
         </button>
+
         <div
           onClick={() => setProfileOpen(true)}
-          className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center -mt-10 border-[6px] border-[#d1dbd3] shadow-xl text-white cursor-pointer active:scale-90 transition-transform"
+          className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center -mt-12 border-[8px] border-[#d1dbd3] shadow-2xl text-white cursor-pointer active:scale-90 transition-all"
         >
           <User className="w-8 h-8" />
         </div>
@@ -326,89 +432,28 @@ export default function Index() {
             setAlertsOpen(true);
             setNotifCount(0);
           }}
-          className="flex flex-col items-center gap-1 relative"
+          className="flex flex-col items-center gap-1.5 relative group"
         >
-          <Bell className="w-6 h-6 text-green-900/40" />
-          <span className="text-[7px] font-black uppercase text-green-900/40">
+          <Bell className="w-6 h-6 text-green-900/40 group-active:scale-90 transition-all" />
+          {notifCount > 0 && (
+            <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center border-2 border-white">
+              {notifCount}
+            </span>
+          )}
+          <span className="text-[8px] font-black uppercase tracking-wider text-green-900/40">
             Alerts
           </span>
-          {notifCount > 0 && (
-            <motion.span
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              className="absolute -top-1 -right-1 bg-red-600 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center border border-white"
-            >
-              {notifCount}
-            </motion.span>
-          )}
         </button>
-
-        <button className="flex flex-col items-center gap-1">
-          <Bookmark className="w-6 h-6 text-green-900/40" />
-          <span className="text-[7px] font-black uppercase text-green-900/40">
+        <button className="flex flex-col items-center gap-1.5 opacity-40">
+          <Bookmark className="w-6 h-6" />
+          <span className="text-[8px] font-black uppercase tracking-wider">
             Hooks
           </span>
         </button>
       </nav>
 
-      {/* --- OVERLAYS --- */}
-
+      {/* --- OVERLAY MODALS --- */}
       <FlicksTray isOpen={flicksOpen} onClose={() => setFlicksOpen(false)} />
-
-      <AnimatePresence>
-        {searchOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[250] bg-white/95 backdrop-blur-2xl flex flex-col p-6"
-          >
-            <div className="flex justify-end mb-4">
-              <button
-                onClick={() => setSearchOpen(false)}
-                className="p-2 bg-black/5 rounded-full"
-              >
-                <X className="w-6 h-6 text-black" />
-              </button>
-            </div>
-            <div className="flex-1 max-w-md mx-auto w-full">
-              <h2 className="text-3xl font-black italic text-blue-600 mb-8 tracking-tighter uppercase">
-                Search Facelook
-              </h2>
-              <SearchUsers />
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {alertsOpen && (
-          <motion.div
-            initial={{ y: "100%" }}
-            animate={{ y: 0 }}
-            exit={{ y: "100%" }}
-            className="fixed inset-0 z-[250] bg-white flex flex-col"
-          >
-            <div className="h-16 bg-green-900 flex items-center justify-between px-6 text-white shrink-0">
-              <div className="flex items-center gap-2">
-                <Bell className="w-5 h-5 text-green-400" />
-                <h2 className="font-black tracking-[3px] uppercase text-sm">
-                  Notifications
-                </h2>
-              </div>
-              <button
-                onClick={() => setAlertsOpen(false)}
-                className="bg-white/20 p-2 rounded-full"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto">
-              <NotificationPanel />
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       <AnimatePresence>
         {chatOpen && (
@@ -416,15 +461,16 @@ export default function Index() {
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
-            className="fixed inset-0 z-[200] bg-white flex flex-col"
+            transition={{ type: "tween", duration: 0.3 }}
+            className="fixed inset-0 z-[400] bg-white flex flex-col"
           >
-            <div className="h-16 bg-blue-600 flex items-center justify-between px-6 text-white shrink-0 shadow-lg">
-              <h2 className="font-black tracking-[5px] uppercase text-sm italic">
+            <div className="h-16 bg-blue-600 flex items-center justify-between px-6 text-white shrink-0 shadow-2xl">
+              <h2 className="font-black tracking-[6px] uppercase text-sm italic">
                 VIBE ⚡
               </h2>
               <button
                 onClick={() => setChatOpen(false)}
-                className="bg-white/20 p-2 rounded-full hover:bg-white/30 transition-colors"
+                className="bg-white/20 p-2 rounded-full active:scale-90"
               >
                 <X className="w-6 h-6" />
               </button>
@@ -437,46 +483,47 @@ export default function Index() {
       </AnimatePresence>
 
       <AnimatePresence>
-        {settingsOpen && (
-          <div className="fixed inset-0 z-[210]">
-            <div
-              className="absolute inset-0 bg-black/40 backdrop-blur-md"
-              onClick={() => setSettingsOpen(false)}
-            />
-            <motion.div
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
-              className="absolute bottom-0 left-0 right-0 h-[80%] bg-white rounded-t-[3rem] shadow-2xl p-6"
+        {searchOpen && (
+          <motion.div
+            initial={{ opacity: 0, scale: 1.1 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[450] bg-white/95 backdrop-blur-3xl flex flex-col p-6"
+          >
+            <button
+              onClick={() => setSearchOpen(false)}
+              className="self-end p-3 bg-black/5 rounded-full mb-8"
             >
-              <SettingsPanel
-                isOpen={true}
-                onClose={() => setSettingsOpen(false)}
-                onManageFriends={() => {
-                  setSettingsOpen(false);
-                  setFriendsListOpen(true);
-                }}
-              />
-            </motion.div>
-          </div>
+              <X className="w-7 h-7 text-black" />
+            </button>
+            <div className="max-w-md mx-auto w-full">
+              <SearchUsers />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {alertsOpen && (
+          <motion.div
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            className="fixed inset-0 z-[450] bg-white flex flex-col"
+          >
+            <div className="h-16 bg-green-900 flex items-center justify-between px-6 text-white">
+              <h2 className="font-black uppercase tracking-widest">Alerts</h2>
+              <button onClick={() => setAlertsOpen(false)}>
+                <X className="w-7 h-7" />
+              </button>
+            </div>
+            <NotificationPanel />
+          </motion.div>
         )}
       </AnimatePresence>
 
       <AnimatePresence>
         {profileOpen && <ProfileSection onBack={() => setProfileOpen(false)} />}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {friendsListOpen && (
-          <motion.div
-            initial={{ y: "100%" }}
-            animate={{ y: 0 }}
-            exit={{ y: "100%" }}
-            className="fixed inset-0 z-[300] bg-white"
-          >
-            <FriendListOverlay onClose={() => setFriendsListOpen(false)} />
-          </motion.div>
-        )}
       </AnimatePresence>
     </div>
   );
