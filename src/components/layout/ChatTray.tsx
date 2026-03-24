@@ -92,7 +92,7 @@ export default function ChatTray({
   const [conversations, setConversations] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [selectedConvId, setSelectedConvId] = useState<string | null>(null);
+  const [selectedConv, setSelectedConv] = useState<any>(null);
   const [popup, setPopup] = useState<{ visible: boolean; msg: any }>({
     visible: false,
     msg: null,
@@ -113,7 +113,10 @@ export default function ChatTray({
           filter: `receiver_id=eq.${user.id}`,
         },
         (payload) => {
-          if (selectedConvId !== payload.new.conversation_id) {
+          if (
+            !selectedConv ||
+            selectedConv.id !== payload.new.conversation_id
+          ) {
             playSound("notif");
             setPopup({ visible: true, msg: payload.new });
             setTimeout(() => setPopup({ visible: false, msg: null }), 5000);
@@ -126,7 +129,7 @@ export default function ChatTray({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, isOpen, selectedConvId]);
+  }, [user, isOpen, selectedConv]);
 
   const loadConversations = async () => {
     const { data } = await supabase
@@ -154,21 +157,25 @@ export default function ChatTray({
   const startNewChat = async (otherUser: any) => {
     const { data: existing } = await supabase
       .from("conversations")
-      .select("id")
+      .select(
+        `*, p1:participant_1_id(full_name, avatar_url, id), p2:participant_2_id(full_name, avatar_url, id)`,
+      )
       .or(
         `and(participant_1_id.eq.${user?.id},participant_2_id.eq.${otherUser.id}),and(participant_1_id.eq.${otherUser.id},participant_2_id.eq.${user?.id})`,
       )
       .maybeSingle();
 
     if (existing) {
-      setSelectedConvId(existing.id);
+      setSelectedConv(existing);
     } else {
       const { data: newConv } = await supabase
         .from("conversations")
         .insert({ participant_1_id: user?.id, participant_2_id: otherUser.id })
-        .select()
+        .select(
+          `*, p1:participant_1_id(full_name, avatar_url, id), p2:participant_2_id(full_name, avatar_url, id)`,
+        )
         .single();
-      if (newConv) setSelectedConvId(newConv.id);
+      if (newConv) setSelectedConv(newConv);
     }
     setView("chat");
     setSearchQuery("");
@@ -183,9 +190,12 @@ export default function ChatTray({
             initial={{ y: -100 }}
             animate={{ y: 20 }}
             exit={{ y: -100 }}
-            className="fixed top-4 left-1/2 -translate-x-1/2 z-[6000] w-[90%] max-w-[360px] bg-white p-4 rounded-[2rem] shadow-2xl border border-blue-50 flex items-center gap-3 cursor-pointer"
+            className="fixed top-4 left-1/2 -translate-x-1/2 z-[6000] w-[90%] max-w-[360px] bg-white p-4 rounded-[2rem] shadow-2xl border flex items-center gap-3 cursor-pointer"
             onClick={() => {
-              setSelectedConvId(popup.msg.conversation_id);
+              const conv = conversations.find(
+                (c) => c.id === popup.msg.conversation_id,
+              );
+              if (conv) setSelectedConv(conv);
               setView("chat");
               setPopup({ visible: false, msg: null });
             }}
@@ -222,12 +232,11 @@ export default function ChatTray({
                     </h2>
                     <button
                       onClick={onClose}
-                      className="p-3 bg-gray-100 rounded-full hover:bg-gray-200"
+                      className="p-3 bg-gray-100 rounded-full"
                     >
                       <X size={20} />
                     </button>
                   </div>
-                  {/* FRIEND SEARCH SYSTEM */}
                   <div className="relative">
                     <Search
                       className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
@@ -271,7 +280,7 @@ export default function ChatTray({
                         key={c.id}
                         whileTap={{ scale: 0.98 }}
                         onClick={() => {
-                          setSelectedConvId(c.id);
+                          setSelectedConv(c);
                           setView("chat");
                         }}
                         className="flex items-center gap-4 p-5 bg-white rounded-[2.5rem] cursor-pointer shadow-sm hover:shadow-md transition-all"
@@ -285,10 +294,10 @@ export default function ChatTray({
                             {other?.full_name}
                           </p>
                           <p className="text-xs text-gray-400 truncate font-medium">
-                            {c.last_message || "Start a conversation"}
+                            {c.last_message || "Start a chat"}
                           </p>
                         </div>
-                        <div className="text-[10px] font-bold text-gray-300 uppercase tracking-tighter">
+                        <div className="text-[10px] font-bold text-gray-300">
                           {c.last_message_at &&
                             formatDistanceToNow(new Date(c.last_message_at))}
                         </div>
@@ -299,7 +308,7 @@ export default function ChatTray({
               </div>
             ) : (
               <ChatView
-                convId={selectedConvId!}
+                conversation={selectedConv}
                 onBack={() => {
                   setView("list");
                   loadConversations();
@@ -313,7 +322,13 @@ export default function ChatTray({
   );
 }
 
-function ChatView({ convId, onBack }: { convId: string; onBack: () => void }) {
+function ChatView({
+  conversation,
+  onBack,
+}: {
+  conversation: any;
+  onBack: () => void;
+}) {
   const { user } = useAuth();
   const [messages, setMessages] = useState<any[]>([]);
   const [text, setText] = useState("");
@@ -325,6 +340,11 @@ function ChatView({ convId, onBack }: { convId: string; onBack: () => void }) {
 
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const convId = conversation.id;
+  const otherUser =
+    conversation.participant_1_id === user?.id
+      ? conversation.p2
+      : conversation.p1;
 
   useEffect(() => {
     loadMsgs();
@@ -340,7 +360,10 @@ function ChatView({ convId, onBack }: { convId: string; onBack: () => void }) {
         },
         (p) => {
           if (p.eventType === "INSERT") {
-            setMessages((prev) => [...prev, p.new]);
+            setMessages((prev) => {
+              if (prev.find((m) => m.id === p.new.id)) return prev;
+              return [...prev, p.new];
+            });
             if (p.new.sender_id !== user?.id) playSound("receive");
           }
           if (p.eventType === "DELETE") {
@@ -372,35 +395,25 @@ function ChatView({ convId, onBack }: { convId: string; onBack: () => void }) {
     setMessages(data || []);
   };
 
-  // --- FIX: Message Sending Logic ---
   const handleSend = async (content: string, type: any = "text") => {
     if (!content.trim() || !user) return;
 
-    // Optimistic UI for Send button responsiveness
     const msgText = content;
     setText("");
     setShowStickers(false);
 
-    const { data: conv } = await supabase
-      .from("conversations")
-      .select("*")
-      .eq("id", convId)
-      .single();
-    const receiverId =
-      conv.participant_1_id === user.id
-        ? conv.participant_2_id
-        : conv.participant_1_id;
+    // Seed immediate UI response (Optimistic)
+    playSound("send");
 
     const { error } = await supabase.from("messages").insert({
       conversation_id: convId,
       sender_id: user.id,
-      receiver_id: receiverId,
+      receiver_id: otherUser.id,
       content: msgText,
       type,
     });
 
     if (!error) {
-      playSound("send");
       await supabase
         .from("conversations")
         .update({
@@ -408,8 +421,6 @@ function ChatView({ convId, onBack }: { convId: string; onBack: () => void }) {
           last_message_at: new Date().toISOString(),
         })
         .eq("id", convId);
-    } else {
-      console.error("Msg Error:", error);
     }
   };
 
@@ -432,16 +443,20 @@ function ChatView({ convId, onBack }: { convId: string; onBack: () => void }) {
   };
 
   const startRecord = async () => {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    mediaRecorder.current = new MediaRecorder(stream);
-    const chunks: Blob[] = [];
-    mediaRecorder.current.ondataavailable = (e) => chunks.push(e.data);
-    mediaRecorder.current.onstop = () => {
-      const blob = new Blob(chunks, { type: "audio/ogg" });
-      uploadAndSend(new File([blob], "voice.ogg"), "voice");
-    };
-    mediaRecorder.current.start();
-    setIsRecording(true);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorder.current = new MediaRecorder(stream);
+      const chunks: Blob[] = [];
+      mediaRecorder.current.ondataavailable = (e) => chunks.push(e.data);
+      mediaRecorder.current.onstop = () => {
+        const blob = new Blob(chunks, { type: "audio/ogg" });
+        uploadAndSend(new File([blob], "voice.ogg"), "voice");
+      };
+      mediaRecorder.current.start();
+      setIsRecording(true);
+    } catch (err) {
+      alert("Mic access denied");
+    }
   };
 
   return (
@@ -458,9 +473,6 @@ function ChatView({ convId, onBack }: { convId: string; onBack: () => void }) {
               className="w-full max-w-sm bg-white rounded-[2.5rem] p-6 space-y-3"
               onClick={(e) => e.stopPropagation()}
             >
-              <p className="text-center font-black uppercase text-[10px] text-gray-400">
-                Manage Message
-              </p>
               <button
                 onClick={() => {
                   supabase.from("messages").delete().eq("id", selectedMsg.id);
@@ -481,13 +493,19 @@ function ChatView({ convId, onBack }: { convId: string; onBack: () => void }) {
         )}
       </AnimatePresence>
 
-      <div className="p-4 border-b flex items-center gap-3 sticky top-0 bg-white/80 backdrop-blur-md z-30">
+      <div className="p-4 border-b flex items-center gap-3 sticky top-0 bg-white/90 backdrop-blur-md z-30">
         <button onClick={onBack} className="p-2 hover:bg-gray-100 rounded-full">
           <ArrowLeft size={20} />
         </button>
-        <p className="font-black text-xs uppercase tracking-tighter">
-          Live Conversation
-        </p>
+        <div className="flex items-center gap-3">
+          <img
+            src={otherUser?.avatar_url}
+            className="w-8 h-8 rounded-full border"
+          />
+          <p className="font-black text-xs uppercase tracking-tighter">
+            {otherUser?.full_name}
+          </p>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar bg-[#f8faff]">
@@ -502,7 +520,7 @@ function ChatView({ convId, onBack }: { convId: string; onBack: () => void }) {
             {deletingId === m.id && <SmokeEffect />}
             <div
               onClick={() => setSelectedMsg(m)}
-              className={`p-5 rounded-[2.2rem] max-w-[85%] shadow-sm relative group cursor-pointer ${m.sender_id === user?.id ? "bg-blue-600 text-white rounded-tr-none shadow-blue-100" : "bg-white text-black rounded-tl-none border border-gray-100"}`}
+              className={`p-5 rounded-[2.2rem] max-w-[85%] shadow-sm relative group cursor-pointer ${m.sender_id === user?.id ? "bg-blue-600 text-white rounded-tr-none" : "bg-white text-black rounded-tl-none border border-gray-100"}`}
             >
               {m.type === "text" && (
                 <p className="text-sm font-bold">{m.content}</p>
@@ -533,8 +551,8 @@ function ChatView({ convId, onBack }: { convId: string; onBack: () => void }) {
                   className="flex items-center gap-3 bg-black/5 p-3 rounded-2xl border border-black/5"
                 >
                   <Music size={18} />{" "}
-                  <span className="text-[10px] font-black uppercase">
-                    Play Music File
+                  <span className="text-[10px] font-black uppercase tracking-widest">
+                    MP3 File
                   </span>
                 </button>
               )}
@@ -608,7 +626,7 @@ function ChatView({ convId, onBack }: { convId: string; onBack: () => void }) {
 
           <input
             className="flex-1 bg-transparent px-2 outline-none font-bold text-sm text-black"
-            placeholder="Kaho kya kehna hai..."
+            placeholder="Type message..."
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSend(text)}
@@ -638,9 +656,7 @@ function ChatView({ convId, onBack }: { convId: string; onBack: () => void }) {
       {uploading && (
         <div className="absolute inset-0 bg-white/70 backdrop-blur-md flex flex-col items-center justify-center z-[500]">
           <Loader2 className="animate-spin text-blue-600" size={40} />
-          <p className="text-[10px] font-black uppercase mt-2 tracking-widest text-blue-600">
-            Uploading...
-          </p>
+          <p className="text-[10px] font-black uppercase mt-2">Uploading...</p>
         </div>
       )}
     </div>
