@@ -14,6 +14,10 @@ import {
   UserX,
   ShieldAlert,
   Check,
+  Camera,
+  Mic,
+  Play,
+  Pause,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { formatDistanceToNow } from "date-fns";
@@ -31,7 +35,49 @@ const playSound = (type: "send" | "receive" | "notif" | "delete") => {
   };
   const audio = new Audio(sounds[type]);
   audio.volume = 0.3;
-  audio.play().catch(() => {}); // Browser block na kare isliye catch
+  audio.play().catch(() => {});
+};
+
+// --- VOICE PLAYER COMPONENT ---
+const VoicePlayer = ({ url }: { url: string }) => {
+  const [playing, setPlaying] = useState(false);
+  const audioRef = useRef(new Audio(url));
+
+  const toggle = () => {
+    if (playing) audioRef.current.pause();
+    else audioRef.current.play();
+    setPlaying(!playing);
+  };
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    audio.onended = () => setPlaying(false);
+    return () => {
+      audio.pause();
+    };
+  }, []);
+
+  return (
+    <div className="flex items-center gap-3 bg-white/20 p-2 rounded-2xl min-w-[150px]">
+      <button
+        onClick={toggle}
+        className="bg-white text-blue-600 p-2 rounded-full shadow-lg"
+      >
+        {playing ? (
+          <Pause size={14} fill="currentColor" />
+        ) : (
+          <Play size={14} fill="currentColor" />
+        )}
+      </button>
+      <div className="flex-1 h-1 bg-white/30 rounded-full overflow-hidden">
+        <motion.div
+          animate={{ x: playing ? ["0%", "100%"] : "0%" }}
+          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+          className="w-1/3 h-full bg-white"
+        />
+      </div>
+    </div>
+  );
 };
 
 // --- SMOKE/DHUWAN EFFECT ---
@@ -147,7 +193,10 @@ const GlobalNotification = ({ msg, visible, onClose }: any) => (
             New Vibe
           </p>
           <p className="text-sm font-bold text-gray-800 truncate">
-            {msg?.content?.startsWith("http") ? "Sent a Sticker" : msg?.content}
+            {msg?.content?.includes("firebasestorage") ||
+            msg?.content?.includes("supabase")
+              ? "Sent a file"
+              : msg?.content}
           </p>
         </div>
       </motion.div>
@@ -198,8 +247,11 @@ function ChatView({
   const [isTyping, setIsTyping] = useState(false);
   const [selectedMsg, setSelectedMsg] = useState<any>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
   const [convStatus, setConvStatus] = useState(conversation.status || "normal");
   const bottomRef = useRef<HTMLDivElement>(null);
+  const mediaRecorder = useRef<MediaRecorder | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -274,12 +326,10 @@ function ChatView({
   const handleSend = async (content: string) => {
     if (!content.trim() || !user) return;
     if (!content.startsWith("http")) setText("");
-
-    playSound("send"); // Play send sound immediately
+    playSound("send");
 
     const isSpamReplying =
       convStatus === "spam" && conversation.last_sender_id !== user.id;
-
     const { error } = await supabase.from("messages").insert({
       conversation_id: conversation.id,
       sender_id: user.id,
@@ -293,7 +343,11 @@ function ChatView({
     if (!error) {
       setShowStickers(false);
       const updateObj: any = {
-        last_message: content.startsWith("http") ? "Sent a sticker" : content,
+        last_message: content.startsWith("http")
+          ? content.match(/\.(png|jpg|jpeg|gif|webp)$/i)
+            ? "Sent an image"
+            : "Sent a vibe"
+          : content,
         last_message_at: new Date().toISOString(),
         last_sender_id: user.id,
       };
@@ -303,6 +357,59 @@ function ChatView({
         .update(updateObj)
         .eq("id", conversation.id);
     }
+  };
+
+  // --- IMAGE UPLOAD SYSTEM ---
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    const fileExt = file.name.split(".").pop();
+    const fileName = `${Math.random()}.${fileExt}`;
+    const filePath = `chat/${conversation.id}/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("chat-attachments")
+      .upload(filePath, file);
+    if (!uploadError) {
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("chat-attachments").getPublicUrl(filePath);
+      handleSend(publicUrl);
+    }
+  };
+
+  // --- VOICE MESSAGE SYSTEM ---
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorder.current = new MediaRecorder(stream);
+      const chunks: Blob[] = [];
+      mediaRecorder.current.ondataavailable = (e) => chunks.push(e.data);
+      mediaRecorder.current.onstop = async () => {
+        const blob = new Blob(chunks, { type: "audio/webm" });
+        const fileName = `${Math.random()}.webm`;
+        const filePath = `chat/${conversation.id}/${fileName}`;
+        const { error } = await supabase.storage
+          .from("chat-attachments")
+          .upload(filePath, blob);
+        if (!error) {
+          const {
+            data: { publicUrl },
+          } = supabase.storage.from("chat-attachments").getPublicUrl(filePath);
+          handleSend(publicUrl);
+        }
+      };
+      mediaRecorder.current.start();
+      setIsRecording(true);
+    } catch (err) {
+      console.error("Mic access denied");
+    }
+  };
+
+  const stopRecording = () => {
+    mediaRecorder.current?.stop();
+    setIsRecording(false);
   };
 
   const deleteForMe = (msgId: string) => {
@@ -387,13 +494,22 @@ function ChatView({
                 className={`flex cursor-pointer relative ${msg.sender_id === user?.id ? "justify-end" : "justify-start"}`}
               >
                 {deletingId === msg.id && <SmokeEffect />}
+
                 {msg.content.startsWith("http") ? (
-                  <motion.img
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    src={msg.content}
-                    className="w-32 h-32 object-contain my-2 drop-shadow-lg"
-                  />
+                  msg.content.match(/\.(webm|mp3|wav|ogg)$/i) ? (
+                    <div
+                      className={`p-3 rounded-[1.8rem] ${msg.sender_id === user?.id ? "bg-blue-600 text-white rounded-tr-none" : "bg-white text-gray-800 rounded-tl-none border border-gray-100"}`}
+                    >
+                      <VoicePlayer url={msg.content} />
+                    </div>
+                  ) : (
+                    <motion.img
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      src={msg.content}
+                      className="w-48 h-auto max-h-64 rounded-3xl object-cover my-2 drop-shadow-lg border-4 border-white shadow-xl"
+                    />
+                  )
                 ) : (
                   <div
                     className={`max-w-[80%] p-4 rounded-[1.8rem] shadow-sm relative ${msg.sender_id === user?.id ? "bg-blue-600 text-white rounded-tr-none shadow-blue-200" : "bg-white text-gray-800 rounded-tl-none border border-gray-100"}`}
@@ -423,6 +539,14 @@ function ChatView({
       </div>
 
       <div className="p-4 bg-white/60 backdrop-blur-2xl border-t border-white/20 relative">
+        <input
+          type="file"
+          hidden
+          ref={fileInputRef}
+          accept="image/*"
+          onChange={handleFileUpload}
+        />
+
         <AnimatePresence>
           {showStickers && (
             <motion.div
@@ -444,16 +568,28 @@ function ChatView({
             </motion.div>
           )}
         </AnimatePresence>
+
         <div className="flex items-center gap-2 bg-white rounded-full p-1.5 shadow-xl border border-gray-100">
           <button
             onClick={() => setShowStickers(!showStickers)}
-            className={`p-2 ml-2 rounded-full transition-all ${showStickers ? "bg-blue-100 text-blue-600" : "text-gray-400"}`}
+            className={`p-2 ml-1 rounded-full transition-all ${showStickers ? "bg-blue-100 text-blue-600" : "text-gray-400"}`}
           >
-            <Smile size={24} />
+            <Smile size={22} />
           </button>
+
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="p-2 text-gray-400 hover:text-blue-500"
+          >
+            <Camera size={22} />
+          </button>
+
           <input
-            className="flex-1 bg-transparent px-3 py-2.5 outline-none text-sm font-bold text-gray-700 placeholder:text-gray-300"
+            className="flex-1 bg-transparent px-2 py-2.5 outline-none text-sm font-bold text-gray-700 placeholder:text-gray-300"
             value={text}
+            placeholder={
+              isRecording ? "Recording vibe..." : "Type your vibe..."
+            }
             onChange={(e) => {
               setText(e.target.value);
               supabase
@@ -464,16 +600,34 @@ function ChatView({
                   payload: { userId: user?.id, typing: true },
                 });
             }}
-            placeholder="Type your vibe..."
             onKeyDown={(e) => e.key === "Enter" && handleSend(text)}
           />
-          <motion.button
-            whileTap={{ scale: 0.9 }}
-            onClick={() => handleSend(text)}
-            className="bg-blue-600 p-3 rounded-full text-white shadow-lg shadow-blue-200"
-          >
-            <Send size={18} />
-          </motion.button>
+
+          {text.trim() ? (
+            <motion.button
+              whileTap={{ scale: 0.9 }}
+              onClick={() => handleSend(text)}
+              className="bg-blue-600 p-3 rounded-full text-white shadow-lg shadow-blue-200"
+            >
+              <Send size={18} />
+            </motion.button>
+          ) : (
+            <motion.button
+              onMouseDown={startRecording}
+              onMouseUp={stopRecording}
+              onTouchStart={startRecording}
+              onTouchEnd={stopRecording}
+              animate={
+                isRecording
+                  ? { scale: [1, 1.2, 1], backgroundColor: "#ef4444" }
+                  : {}
+              }
+              transition={{ repeat: Infinity, duration: 1 }}
+              className={`p-3 rounded-full text-white shadow-lg ${isRecording ? "bg-red-500" : "bg-indigo-600 shadow-indigo-200"}`}
+            >
+              <Mic size={18} />
+            </motion.button>
+          )}
         </div>
       </div>
     </div>
@@ -540,7 +694,7 @@ export default function ChatTray({
         },
         (payload) => {
           if (selectedConvId !== payload.new.conversation_id) {
-            playSound("notif"); // Play notification sound
+            playSound("notif");
             setPopup({ visible: true, msg: payload.new });
             setTimeout(() => setPopup({ visible: false, msg: null }), 5000);
             loadAll();
