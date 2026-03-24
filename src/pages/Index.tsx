@@ -37,30 +37,46 @@ function playTraySound() {
   } catch {}
 }
 
-// ── LUCKY MESSAGES ──
+// ── PERSONALIZED RASHIFAL LOGIC ──
 const LUCKY_MESSAGES = [
-  "Aaj ka din aapke liye bahut shubh hai. Naya avsar aane wala hai.",
-  "Taare keh rahe hain — aaj dil ki suno, dimag baad mein!",
-  "Aaj paisa aur pyaar dono muskura rahe hain aap par ☀️",
-  "Koi khaas mulakat ho sakti hai aaj. Taiyaar rahein! 💫",
-  "Aaj creativity peak par hai. Kuch naya try karein 🎨",
-  "Ghar mein khushiyan aayengi. Parivar ke saath time bitayein 🏡",
-  "Career mein ek surprising turn aane wala hai aaj 🚀",
-  "Swasthya achha rahega, lekin paani khub piyein 💧",
+  "Aaj kismat aapke saath hai, naya kaam shuru karne ka sahi samay hai.",
+  "Taare keh rahe hain — aaj dil ki suno, dimag baad mein! ✨",
+  "Achanak dhan laabh (money gain) ke yog ban rahe hain. Party toh banti hai! 💰",
+  "Aaj health ka dhyan rakhein, paani khub piyein aur fit rahein. 💧",
+  "Career mein ek surprising turn aane wala hai aaj. Taiyaar rahein! 🚀",
+  "Koi khaas mulakat ho sakti hai aaj jo aapka din bana degi. 💫",
+  "Aaj creativity peak par hai. Kuch naya try karein, safalta milegi. 🎨",
+  "Ghar mein khushiyan aayengi. Parivar ke saath sukoon bhara time bitayein. 🏡",
 ];
 
-const LUCKY_NUMBERS = [3, 7, 9, 11, 14, 21, 27, 33, 42, 55, 66, 77, 88, 99];
+const LUCKY_NUMBERS = [3, 7, 9, 11, 21, 27, 33, 42, 55, 77, 99];
 
-function getRashifal(name: string) {
-  const seed = name.charCodeAt(0) + new Date().getDate();
-  const msg = LUCKY_MESSAGES[seed % LUCKY_MESSAGES.length];
-  const num = LUCKY_NUMBERS[seed % LUCKY_NUMBERS.length];
-  return { msg, num };
+function getPersonalizedRashifal(userId: string) {
+  // User ID aur Date ko combine karke unique seed banate hain
+  const today = new Date().toISOString().slice(0, 10);
+  const seedString = userId + today;
+
+  let hash = 0;
+  for (let i = 0; i < seedString.length; i++) {
+    hash = seedString.charCodeAt(i) + ((hash << 5) - hash);
+  }
+
+  const msgIndex = Math.abs(hash) % LUCKY_MESSAGES.length;
+  const numIndex = Math.abs(hash) % LUCKY_NUMBERS.length;
+
+  return {
+    msg: LUCKY_MESSAGES[msgIndex],
+    num: LUCKY_NUMBERS[numIndex],
+  };
 }
 
-// ── RASHIFAL SECTION (Updated Clean Style) ──
-function RashifalCard({ name }: { name: string }) {
-  const { msg, num } = useMemo(() => getRashifal(name), [name]);
+// ── RASHIFAL SECTION ──
+function RashifalCard({ profile }: { profile: any }) {
+  const name = profile?.full_name || profile?.username || "Dost";
+  const userId = profile?.id || "guest";
+
+  const { msg, num } = useMemo(() => getPersonalizedRashifal(userId), [userId]);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: -10 }}
@@ -303,7 +319,6 @@ function StoriesTray({
   );
 }
 
-// ── POWER BUTTON ──
 function PowerButton({ icon: Icon, label, color, onClick }: any) {
   return (
     <motion.button
@@ -323,7 +338,6 @@ function PowerButton({ icon: Icon, label, color, onClick }: any) {
   );
 }
 
-// ── MAIN INDEX ──
 export default function Index() {
   const { profile } = useAuth();
   const [flicksOpen, setFlicksOpen] = useState(false);
@@ -333,8 +347,6 @@ export default function Index() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [alertsOpen, setAlertsOpen] = useState(false);
   const [searchFocus, setSearchFocus] = useState(false);
-
-  const displayName = profile?.full_name || profile?.username || "Friend";
 
   const openFlicks = useCallback(() => {
     playTraySound();
@@ -346,7 +358,7 @@ export default function Index() {
   }, []);
 
   return (
-    <div className="h-screen w-screen overflow-hidden flex flex-col relative bg-[#f8faff]">
+    <div className="h-screen w-screen overflow-hidden flex flex-col relative bg-[#f8faff] selection:bg-cyan-100">
       {/* HEADER */}
       <header className="relative z-[60] h-16 flex items-center gap-3 px-5 shrink-0 bg-white/80 backdrop-blur-2xl border-b border-gray-100">
         <div className="flex items-center gap-2">
@@ -364,19 +376,19 @@ export default function Index() {
             placeholder="Search..."
             onFocus={() => setSearchFocus(true)}
             onBlur={() => setSearchFocus(false)}
-            className="bg-transparent outline-none text-sm w-full font-medium"
+            className="bg-transparent outline-none text-sm w-full font-medium text-gray-900"
           />
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setAlertsOpen(true)}
-            className="p-2.5 bg-gray-100 rounded-full text-gray-600"
+            className="p-2.5 bg-gray-100 rounded-full text-gray-600 active:scale-90 transition-transform"
           >
             <Bell className="w-5 h-5" />
           </button>
           <button
             onClick={() => setSettingsOpen(true)}
-            className="p-2.5 bg-gray-100 rounded-full text-gray-600"
+            className="p-2.5 bg-gray-100 rounded-full text-gray-600 active:scale-90 transition-transform"
           >
             <Settings className="w-5 h-5" />
           </button>
@@ -385,21 +397,18 @@ export default function Index() {
 
       {/* MAIN AREA */}
       <div className="relative flex-1 overflow-hidden flex">
-        {/* LEFT TRAY HANDLE */}
         <div
           onClick={openFlicks}
           className="absolute left-0 top-1/2 -translate-y-1/2 z-50 h-32 w-1.5 bg-cyan-500 rounded-r-full cursor-pointer hover:w-3 transition-all"
         />
-
         <main className="flex-1 overflow-y-auto no-scrollbar pb-32">
           <div className="pt-4">
-            <RashifalCard name={displayName} />
+            {/* FIXED: Passing profile for real-time name & unique hash */}
+            <RashifalCard profile={profile} />
           </div>
           <HooksSection />
           <MainFeed />
         </main>
-
-        {/* RIGHT TRAY HANDLE */}
         <div
           onClick={openStories}
           className="absolute right-0 top-1/2 -translate-y-1/2 z-50 h-32 w-1.5 bg-purple-500 rounded-l-full cursor-pointer hover:w-3 transition-all"
@@ -441,9 +450,11 @@ export default function Index() {
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
-            className="fixed inset-0 z-[300] bg-white"
+            className="fixed inset-0 z-[300] bg-white text-gray-900"
           >
-            <SettingsPanel onClose={() => setSettingsOpen(false)} />
+            <div className="h-full w-full overflow-y-auto flex flex-col">
+              <SettingsPanel onClose={() => setSettingsOpen(false)} />
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -456,20 +467,24 @@ export default function Index() {
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
-            className="fixed inset-0 z-[300] bg-white flex flex-col"
+            className="fixed inset-0 z-[300] bg-white flex flex-col text-gray-900"
           >
-            <div className="h-16 flex items-center justify-between px-6 border-b">
-              <h2 className="font-black">NOTIFICATIONS</h2>
-              <button onClick={() => setAlertsOpen(false)}>
+            <div className="h-16 flex items-center justify-between px-6 border-b shrink-0">
+              <h2 className="font-black text-gray-900">NOTIFICATIONS</h2>
+              <button
+                onClick={() => setAlertsOpen(false)}
+                className="text-gray-900"
+              >
                 <X />
               </button>
             </div>
-            <NotificationPanel />
+            <div className="flex-1 overflow-y-auto">
+              <NotificationPanel />
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Floating Chat */}
       <button
         onClick={() => setChatOpen(true)}
         className="fixed bottom-28 right-6 z-[70] w-14 h-14 bg-black rounded-[1.8rem] shadow-2xl flex items-center justify-center border-2 border-white/20"
@@ -482,7 +497,7 @@ export default function Index() {
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
-            className="fixed inset-0 z-[400] bg-white"
+            className="fixed inset-0 z-[400] bg-white text-gray-900"
           >
             <ChatTray isOpen={true} onClose={() => setChatOpen(false)} />
           </motion.div>

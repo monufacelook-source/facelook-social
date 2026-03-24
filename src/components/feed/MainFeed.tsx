@@ -4,6 +4,7 @@ import { supabase } from "@/lib/supabase";
 import { Post } from "@/lib/types";
 import PostCard from "./PostCard";
 import CreatePost from "./CreatePost";
+import YouTubeCard from "./YouTubeCard"; // 👈 Ye import check kar lena
 
 async function fetchPosts(): Promise<Post[]> {
   const { data, error } = await supabase
@@ -35,14 +36,28 @@ function PostSkeleton() {
 }
 
 export default function MainFeed() {
-  const { data: posts, isLoading, error } = useQuery<Post[]>({
+  const {
+    data: posts,
+    isLoading,
+    error,
+  } = useQuery<Post[]>({
     queryKey: ["posts"],
     queryFn: fetchPosts,
     refetchInterval: 30000,
   });
 
+  // ── YOUTUBE VIDEOS DATA ──
+  const ytVideos = [
+    { id: "dQw4w9WgXcQ", title: "Facelook Trending Vibes" },
+    { id: "L_LUpnjLp8M", title: "Future of Tech" },
+    { id: "y6120QOlsfU", title: "Lofi Beats for Coding" },
+    { id: "3JZ_D3ELwOQ", title: "Varanasi Morning Aura" },
+  ];
+
   return (
-    <div className="px-4 pb-4">
+    <div className="px-4 pb-20">
+      {" "}
+      {/* pb-20 taaki bottom nav ke peeche na chupe */}
       <div className="max-w-lg mx-auto space-y-4">
         <motion.h1
           className="font-display text-xl font-bold gradient-text pt-1 pb-2"
@@ -65,7 +80,9 @@ export default function MainFeed() {
 
         {error && (
           <div className="glass-card p-6 text-center">
-            <p className="text-muted-foreground text-sm">Could not load posts. Check your Supabase table setup.</p>
+            <p className="text-muted-foreground text-sm">
+              Could not load posts. Check your Supabase table setup.
+            </p>
           </div>
         )}
 
@@ -73,13 +90,36 @@ export default function MainFeed() {
           <div className="glass-card p-8 text-center">
             <p className="text-2xl mb-2">👋</p>
             <p className="font-semibold text-sm">No posts yet</p>
-            <p className="text-muted-foreground text-xs mt-1">Be the first to share something!</p>
+            <p className="text-muted-foreground text-xs mt-1">
+              Be the first to share something!
+            </p>
           </div>
         )}
 
-        {posts?.map((post, i) => (
-          <PostCard key={post.id} post={post} index={i} />
-        ))}
+        {/* ── POSTS + YOUTUBE INJECTION LOGIC ── */}
+        {posts?.map((post, i) => {
+          // Har 3 posts ke baad ek video dikhega (index 2, 5, 8...)
+          const showVideo = (i + 1) % 3 === 0;
+          const videoIndex = Math.floor(i / 3) % ytVideos.length;
+          const video = ytVideos[videoIndex];
+
+          return (
+            <div key={post.id} className="space-y-4">
+              <PostCard post={post} index={i} />
+
+              {showVideo && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  whileInView={{ opacity: 1, scale: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.4 }}
+                >
+                  <YouTubeCard videoId={video.id} title={video.title} />
+                </motion.div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
