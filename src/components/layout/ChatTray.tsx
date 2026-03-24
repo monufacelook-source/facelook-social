@@ -37,48 +37,23 @@ const playSound = (type: "send" | "receive" | "notif" | "delete") => {
     delete: "https://www.soundjay.com/buttons/sounds/button-20.mp3",
   };
   const audio = new Audio(soundLinks[type]);
-  audio.volume = 0.5;
+  audio.volume = 0.4;
   audio.play().catch(() => {});
 };
 
-// --- SMOKE EFFECT ---
 const SmokeEffect = () => (
   <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-50">
-    {[...Array(15)].map((_, i) => (
+    {[...Array(12)].map((_, i) => (
       <motion.div
         key={i}
         initial={{ scale: 0, opacity: 1 }}
-        animate={{
-          scale: [0, 3, 5],
-          opacity: [1, 0.4, 0],
-          x: (Math.random() - 0.5) * 250,
-          y: (Math.random() - 0.5) * 250,
-        }}
-        transition={{ duration: 0.8 }}
-        className="absolute w-8 h-8 bg-gray-300/60 rounded-full blur-2xl"
+        animate={{ scale: [0, 4], opacity: 0 }}
+        transition={{ duration: 0.7 }}
+        className="absolute w-6 h-6 bg-gray-300/50 rounded-full blur-xl"
       />
     ))}
   </div>
 );
-
-const FUNNY_STICKERS = [
-  {
-    url: "https://fonts.gstatic.com/s/e/notoemoji/latest/1f45e/512.gif",
-    label: "Chappal",
-  },
-  {
-    url: "https://fonts.gstatic.com/s/e/notoemoji/latest/1f602/512.gif",
-    label: "LOL",
-  },
-  {
-    url: "https://fonts.gstatic.com/s/e/notoemoji/latest/1f525/512.gif",
-    label: "Fire",
-  },
-  {
-    url: "https://fonts.gstatic.com/s/e/notoemoji/latest/1f4af/512.gif",
-    label: "100",
-  },
-];
 
 export default function ChatTray({
   isOpen,
@@ -103,7 +78,7 @@ export default function ChatTray({
     loadConversations();
 
     const channel = supabase
-      .channel("global_realtime")
+      .channel("inbox_updates")
       .on(
         "postgres_changes",
         {
@@ -112,14 +87,11 @@ export default function ChatTray({
           table: "messages",
           filter: `receiver_id=eq.${user.id}`,
         },
-        (payload) => {
-          if (
-            !selectedConv ||
-            selectedConv.id !== payload.new.conversation_id
-          ) {
+        (p) => {
+          if (!selectedConv || selectedConv.id !== p.new.conversation_id) {
             playSound("notif");
-            setPopup({ visible: true, msg: payload.new });
-            setTimeout(() => setPopup({ visible: false, msg: null }), 5000);
+            setPopup({ visible: true, msg: p.new });
+            setTimeout(() => setPopup({ visible: false, msg: null }), 4000);
             loadConversations();
           }
         },
@@ -165,17 +137,16 @@ export default function ChatTray({
       )
       .maybeSingle();
 
-    if (existing) {
-      setSelectedConv(existing);
-    } else {
-      const { data: newConv } = await supabase
+    if (existing) setSelectedConv(existing);
+    else {
+      const { data: newC } = await supabase
         .from("conversations")
         .insert({ participant_1_id: user?.id, participant_2_id: otherUser.id })
         .select(
           `*, p1:participant_1_id(full_name, avatar_url, id), p2:participant_2_id(full_name, avatar_url, id)`,
         )
         .single();
-      if (newConv) setSelectedConv(newConv);
+      if (newC) setSelectedConv(newC);
     }
     setView("chat");
     setSearchQuery("");
@@ -187,30 +158,21 @@ export default function ChatTray({
       <AnimatePresence>
         {popup.visible && (
           <motion.div
-            initial={{ y: -100 }}
-            animate={{ y: 20 }}
-            exit={{ y: -100 }}
-            className="fixed top-4 left-1/2 -translate-x-1/2 z-[6000] w-[90%] max-w-[360px] bg-white p-4 rounded-[2rem] shadow-2xl border flex items-center gap-3 cursor-pointer"
+            initial={{ y: -50, opacity: 0 }}
+            animate={{ y: 20, opacity: 1 }}
+            exit={{ y: -50, opacity: 0 }}
+            className="fixed top-4 left-1/2 -translate-x-1/2 z-[6000] w-[90%] max-w-[340px] bg-white p-4 rounded-3xl shadow-2xl border flex items-center gap-3 cursor-pointer"
             onClick={() => {
-              const conv = conversations.find(
-                (c) => c.id === popup.msg.conversation_id,
-              );
-              if (conv) setSelectedConv(conv);
               setView("chat");
               setPopup({ visible: false, msg: null });
             }}
           >
-            <div className="bg-blue-600 p-2 rounded-2xl text-white shadow-lg">
-              <Bell size={18} />
+            <div className="bg-blue-600 p-2 rounded-xl text-white">
+              <Bell size={16} />
             </div>
-            <div className="flex-1 truncate">
-              <p className="text-[10px] font-black text-blue-600 uppercase">
-                New Message
-              </p>
-              <p className="text-sm font-bold text-black truncate">
-                {popup.msg?.content}
-              </p>
-            </div>
+            <p className="text-sm font-bold text-black truncate flex-1">
+              {popup.msg?.content}
+            </p>
           </motion.div>
         )}
       </AnimatePresence>
@@ -221,18 +183,18 @@ export default function ChatTray({
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
-            className="fixed inset-y-0 right-0 w-full sm:w-[450px] z-[5000] bg-[#f8faff] shadow-2xl flex flex-col"
+            className="fixed inset-y-0 right-0 w-full sm:w-[450px] z-[5000] bg-white shadow-2xl flex flex-col"
           >
             {view === "list" ? (
-              <div className="flex flex-col h-full">
-                <div className="p-8 bg-white border-b space-y-6">
+              <div className="flex flex-col h-full bg-[#f8faff]">
+                <div className="p-6 bg-white border-b space-y-4">
                   <div className="flex justify-between items-center">
-                    <h2 className="text-3xl font-black italic tracking-tighter uppercase text-blue-600">
-                      Inbox
+                    <h2 className="text-2xl font-black text-blue-600 uppercase italic">
+                      Vibe Chat
                     </h2>
                     <button
                       onClick={onClose}
-                      className="p-3 bg-gray-100 rounded-full"
+                      className="p-2 bg-gray-100 rounded-full"
                     >
                       <X size={20} />
                     </button>
@@ -243,65 +205,55 @@ export default function ChatTray({
                       size={18}
                     />
                     <input
-                      className="w-full bg-gray-100 rounded-full py-4 pl-12 pr-4 outline-none font-bold text-sm"
-                      placeholder="Search friends..."
+                      className="w-full bg-gray-100 rounded-full py-3 pl-12 pr-4 outline-none text-sm font-bold"
+                      placeholder="Find someone..."
                       value={searchQuery}
                       onChange={(e) => handleSearch(e.target.value)}
                     />
                     {searchResults.length > 0 && (
-                      <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-3xl shadow-2xl border p-2 z-50">
+                      <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl border p-2 z-50">
                         {searchResults.map((u) => (
                           <div
                             key={u.id}
                             onClick={() => startNewChat(u)}
-                            className="flex items-center gap-3 p-3 hover:bg-blue-50 rounded-2xl cursor-pointer"
+                            className="flex items-center gap-3 p-3 hover:bg-blue-50 rounded-xl cursor-pointer font-bold text-sm"
                           >
                             <img
                               src={u.avatar_url}
-                              className="w-10 h-10 rounded-full border"
-                            />
-                            <p className="font-bold text-sm">{u.full_name}</p>
-                            <UserPlus
-                              size={16}
-                              className="ml-auto text-blue-600"
-                            />
+                              className="w-8 h-8 rounded-full"
+                            />{" "}
+                            {u.full_name}
                           </div>
                         ))}
                       </div>
                     )}
                   </div>
                 </div>
-
-                <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+                <div className="flex-1 overflow-y-auto p-4 space-y-3">
                   {conversations.map((c) => {
                     const other = c.participant_1_id === user?.id ? c.p2 : c.p1;
                     return (
-                      <motion.div
+                      <div
                         key={c.id}
-                        whileTap={{ scale: 0.98 }}
                         onClick={() => {
                           setSelectedConv(c);
                           setView("chat");
                         }}
-                        className="flex items-center gap-4 p-5 bg-white rounded-[2.5rem] cursor-pointer shadow-sm hover:shadow-md transition-all"
+                        className="flex items-center gap-4 p-4 bg-white rounded-[2rem] cursor-pointer shadow-sm hover:shadow-md transition-all"
                       >
                         <img
                           src={other?.avatar_url}
-                          className="w-14 h-14 rounded-full border-2 border-blue-50 object-cover"
+                          className="w-12 h-12 rounded-full object-cover border"
                         />
                         <div className="flex-1 truncate">
-                          <p className="font-black text-black text-sm uppercase">
+                          <p className="font-bold text-sm">
                             {other?.full_name}
                           </p>
-                          <p className="text-xs text-gray-400 truncate font-medium">
-                            {c.last_message || "Start a chat"}
+                          <p className="text-xs text-gray-400 truncate">
+                            {c.last_message || "Tap to chat"}
                           </p>
                         </div>
-                        <div className="text-[10px] font-bold text-gray-300">
-                          {c.last_message_at &&
-                            formatDistanceToNow(new Date(c.last_message_at))}
-                        </div>
-                      </motion.div>
+                      </div>
                     );
                   })}
                 </div>
@@ -332,55 +284,54 @@ function ChatView({
   const { user } = useAuth();
   const [messages, setMessages] = useState<any[]>([]);
   const [text, setText] = useState("");
-  const [isRecording, setIsRecording] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [showStickers, setShowStickers] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [selectedMsg, setSelectedMsg] = useState<any>(null);
-
-  const mediaRecorder = useRef<MediaRecorder | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const convId = conversation.id;
   const otherUser =
     conversation.participant_1_id === user?.id
       ? conversation.p2
       : conversation.p1;
 
+  // LOAD & SYNC REALTIME
   useEffect(() => {
     loadMsgs();
     const channel = supabase
-      .channel(`room_${convId}`)
+      .channel(`room_${conversation.id}`)
       .on(
         "postgres_changes",
         {
           event: "*",
           schema: "public",
           table: "messages",
-          filter: `conversation_id=eq.${convId}`,
+          filter: `conversation_id=eq.${conversation.id}`,
         },
-        (p) => {
-          if (p.eventType === "INSERT") {
+        (payload) => {
+          if (payload.eventType === "INSERT") {
             setMessages((prev) => {
-              if (prev.find((m) => m.id === p.new.id)) return prev;
-              return [...prev, p.new];
+              // Prevent duplicate display
+              if (prev.find((m) => m.id === payload.new.id)) return prev;
+              return [...prev, payload.new];
             });
-            if (p.new.sender_id !== user?.id) playSound("receive");
+            if (payload.new.sender_id !== user?.id) playSound("receive");
           }
-          if (p.eventType === "DELETE") {
-            setDeletingId(p.old.id);
+          if (payload.eventType === "DELETE") {
+            setDeletingId(payload.old.id);
             playSound("delete");
-            setTimeout(() => {
-              setMessages((prev) => prev.filter((m) => m.id !== p.old.id));
-              setDeletingId(null);
-            }, 800);
+            setTimeout(
+              () =>
+                setMessages((prev) =>
+                  prev.filter((m) => m.id !== payload.old.id),
+                ),
+              800,
+            );
           }
         },
       )
       .subscribe();
+
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [convId]);
+  }, [conversation.id]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -390,275 +341,103 @@ function ChatView({
     const { data } = await supabase
       .from("messages")
       .select("*")
-      .eq("conversation_id", convId)
+      .eq("conversation_id", conversation.id)
       .order("created_at", { ascending: true });
     setMessages(data || []);
   };
 
-  const handleSend = async (content: string, type: any = "text") => {
-    if (!content.trim() || !user) return;
+  const handleSend = async () => {
+    if (!text.trim() || !user) return;
 
-    const msgText = content;
+    const tempMsg = text;
     setText("");
-    setShowStickers(false);
-
-    // Seed immediate UI response (Optimistic)
     playSound("send");
 
-    const { error } = await supabase.from("messages").insert({
-      conversation_id: convId,
-      sender_id: user.id,
-      receiver_id: otherUser.id,
-      content: msgText,
-      type,
-    });
+    // Ye insert query ab seedha chalegi
+    const { data, error } = await supabase
+      .from("messages")
+      .insert({
+        conversation_id: conversation.id,
+        sender_id: user.id,
+        receiver_id: otherUser.id,
+        content: tempMsg,
+        type: "text",
+      })
+      .select()
+      .single();
 
-    if (!error) {
+    if (!error && data) {
+      // Immediate screen update if listener is slow
+      setMessages((prev) =>
+        prev.find((m) => m.id === data.id) ? prev : [...prev, data],
+      );
+
       await supabase
         .from("conversations")
         .update({
-          last_message: type === "text" ? msgText : `Sent a ${type}`,
+          last_message: tempMsg,
           last_message_at: new Date().toISOString(),
         })
-        .eq("id", convId);
-    }
-  };
-
-  const uploadAndSend = async (
-    file: File,
-    type: "image" | "voice" | "music",
-  ) => {
-    setUploading(true);
-    const path = `${type}s/${Date.now()}_${file.name}`;
-    const { data } = await supabase.storage
-      .from("chat-assets")
-      .upload(path, file);
-    if (data) {
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from("chat-assets").getPublicUrl(data.path);
-      handleSend(publicUrl, type);
-    }
-    setUploading(false);
-  };
-
-  const startRecord = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaRecorder.current = new MediaRecorder(stream);
-      const chunks: Blob[] = [];
-      mediaRecorder.current.ondataavailable = (e) => chunks.push(e.data);
-      mediaRecorder.current.onstop = () => {
-        const blob = new Blob(chunks, { type: "audio/ogg" });
-        uploadAndSend(new File([blob], "voice.ogg"), "voice");
-      };
-      mediaRecorder.current.start();
-      setIsRecording(true);
-    } catch (err) {
-      alert("Mic access denied");
+        .eq("id", conversation.id);
     }
   };
 
   return (
-    <div className="flex flex-col h-full bg-white relative">
-      <AnimatePresence>
-        {selectedMsg && (
-          <div
-            className="absolute inset-0 z-[100] bg-black/30 backdrop-blur-sm flex items-end justify-center p-6"
-            onClick={() => setSelectedMsg(null)}
-          >
-            <motion.div
-              initial={{ y: 100 }}
-              animate={{ y: 0 }}
-              className="w-full max-w-sm bg-white rounded-[2.5rem] p-6 space-y-3"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                onClick={() => {
-                  supabase.from("messages").delete().eq("id", selectedMsg.id);
-                  setSelectedMsg(null);
-                }}
-                className="w-full p-4 bg-red-50 text-red-600 rounded-2xl flex justify-between items-center font-bold"
-              >
-                Delete for Everyone <Trash2 size={18} />
-              </button>
-              <button
-                onClick={() => setSelectedMsg(null)}
-                className="w-full p-3 font-bold text-gray-400"
-              >
-                Back
-              </button>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      <div className="p-4 border-b flex items-center gap-3 sticky top-0 bg-white/90 backdrop-blur-md z-30">
+    <div className="flex flex-col h-full bg-[#f0f2f5] relative">
+      <div className="p-4 bg-white border-b flex items-center gap-3 sticky top-0 z-40">
         <button onClick={onBack} className="p-2 hover:bg-gray-100 rounded-full">
           <ArrowLeft size={20} />
         </button>
-        <div className="flex items-center gap-3">
-          <img
-            src={otherUser?.avatar_url}
-            className="w-8 h-8 rounded-full border"
-          />
-          <p className="font-black text-xs uppercase tracking-tighter">
-            {otherUser?.full_name}
-          </p>
-        </div>
+        <img
+          src={otherUser?.avatar_url}
+          className="w-9 h-9 rounded-full border"
+        />
+        <p className="font-black text-sm uppercase tracking-tighter">
+          {otherUser?.full_name}
+        </p>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar bg-[#f8faff]">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
         {messages.map((m) => (
-          <motion.div
+          <div
             key={m.id}
-            layout
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
             className={`flex relative ${m.sender_id === user?.id ? "justify-end" : "justify-start"}`}
           >
             {deletingId === m.id && <SmokeEffect />}
             <div
-              onClick={() => setSelectedMsg(m)}
-              className={`p-5 rounded-[2.2rem] max-w-[85%] shadow-sm relative group cursor-pointer ${m.sender_id === user?.id ? "bg-blue-600 text-white rounded-tr-none" : "bg-white text-black rounded-tl-none border border-gray-100"}`}
+              onDoubleClick={() => {
+                if (m.sender_id === user?.id)
+                  supabase.from("messages").delete().eq("id", m.id);
+              }}
+              className={`p-4 rounded-2xl max-w-[80%] font-bold text-sm shadow-sm transition-all ${m.sender_id === user?.id ? "bg-blue-600 text-white rounded-tr-none" : "bg-white text-black rounded-tl-none border border-gray-100"}`}
             >
-              {m.type === "text" && (
-                <p className="text-sm font-bold">{m.content}</p>
-              )}
-              {m.type === "image" && (
-                <img src={m.content} className="w-60 rounded-3xl" />
-              )}
-              {m.type === "sticker" && (
-                <img src={m.content} className="w-24 h-24" />
-              )}
-              {m.type === "voice" && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    new Audio(m.content).play();
-                  }}
-                  className="flex items-center gap-2 font-black uppercase text-[10px]"
-                >
-                  <Play size={16} fill="currentColor" /> Play Voice
-                </button>
-              )}
-              {m.type === "music" && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    new Audio(m.content).play();
-                  }}
-                  className="flex items-center gap-3 bg-black/5 p-3 rounded-2xl border border-black/5"
-                >
-                  <Music size={18} />{" "}
-                  <span className="text-[10px] font-black uppercase tracking-widest">
-                    MP3 File
-                  </span>
-                </button>
-              )}
-              <p className="text-[8px] mt-1 opacity-50 text-right uppercase font-black">
+              {m.content}
+              <p className="text-[8px] opacity-40 mt-1 text-right">
                 {formatDistanceToNow(new Date(m.created_at))} ago
               </p>
             </div>
-          </motion.div>
+          </div>
         ))}
         <div ref={bottomRef} />
       </div>
 
-      <div className="p-6 bg-white border-t">
-        <AnimatePresence>
-          {showStickers && (
-            <motion.div
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              className="flex justify-around bg-gray-50 p-4 rounded-[2rem] border mb-4"
-            >
-              {FUNNY_STICKERS.map((s) => (
-                <img
-                  key={s.label}
-                  src={s.url}
-                  onClick={() => handleSend(s.url, "sticker")}
-                  className="w-12 h-12 cursor-pointer hover:scale-110"
-                />
-              ))}
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <div className="flex items-center gap-3 bg-gray-50 p-2 rounded-[2.5rem] border shadow-inner">
+      <div className="p-4 bg-white border-t">
+        <div className="flex items-center gap-2 bg-gray-100 rounded-full px-4 py-2 border">
           <input
-            type="file"
-            id="up-img"
-            hidden
-            accept="image/*"
-            onChange={(e) =>
-              e.target.files?.[0] && uploadAndSend(e.target.files[0], "image")
-            }
-          />
-          <input
-            type="file"
-            id="up-mus"
-            hidden
-            accept="audio/mp3"
-            onChange={(e) =>
-              e.target.files?.[0] && uploadAndSend(e.target.files[0], "music")
-            }
-          />
-
-          <button
-            onClick={() => document.getElementById("up-img")?.click()}
-            className="p-3 text-gray-400 hover:text-blue-600"
-          >
-            <ImageIcon size={22} />
-          </button>
-          <button
-            onClick={() => setShowStickers(!showStickers)}
-            className="p-3 text-gray-400 hover:text-yellow-500"
-          >
-            <SmilePlus size={22} />
-          </button>
-          <button
-            onClick={() => document.getElementById("up-mus")?.click()}
-            className="p-3 text-gray-400 hover:text-purple-600"
-          >
-            <Music size={22} />
-          </button>
-
-          <input
-            className="flex-1 bg-transparent px-2 outline-none font-bold text-sm text-black"
-            placeholder="Type message..."
+            className="flex-1 bg-transparent py-2 outline-none font-bold text-sm"
+            placeholder="Kaho kya kehna hai..."
             value={text}
             onChange={(e) => setText(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSend(text)}
+            onKeyDown={(e) => e.key === "Enter" && handleSend()}
           />
-
-          {text.trim() || isRecording ? (
-            <button
-              onClick={() =>
-                isRecording ? mediaRecorder.current?.stop() : handleSend(text)
-              }
-              className={`${isRecording ? "bg-red-500 animate-pulse" : "bg-blue-600"} p-4 rounded-full text-white shadow-lg`}
-            >
-              {isRecording ? <StopCircle size={22} /> : <Send size={22} />}
-            </button>
-          ) : (
-            <button
-              onMouseDown={startRecord}
-              onMouseUp={() => setIsRecording(false)}
-              className="p-4 bg-gray-200 text-gray-500 rounded-full hover:bg-blue-100 hover:text-blue-600"
-            >
-              <Mic size={22} />
-            </button>
-          )}
+          <button
+            onClick={handleSend}
+            className="p-3 bg-blue-600 text-white rounded-full hover:scale-105 active:scale-95 transition-all"
+          >
+            <Send size={18} />
+          </button>
         </div>
       </div>
-
-      {uploading && (
-        <div className="absolute inset-0 bg-white/70 backdrop-blur-md flex flex-col items-center justify-center z-[500]">
-          <Loader2 className="animate-spin text-blue-600" size={40} />
-          <p className="text-[10px] font-black uppercase mt-2">Uploading...</p>
-        </div>
-      )}
     </div>
   );
 }
