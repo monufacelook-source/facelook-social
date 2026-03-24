@@ -36,11 +36,7 @@ function PostSkeleton() {
 }
 
 export default function MainFeed() {
-  const {
-    data: posts,
-    isLoading,
-    error,
-  } = useQuery<Post[]>({
+  const { data: posts, isLoading, error } = useQuery<Post[]>({
     queryKey: ["posts"],
     queryFn: fetchPosts,
     refetchInterval: 30000,
@@ -51,13 +47,11 @@ export default function MainFeed() {
     { id: "dQw4w9WgXcQ", title: "Facelook Trending Vibes" },
     { id: "L_LUpnjLp8M", title: "Future of Tech" },
     { id: "y6120QOlsfU", title: "Lofi Beats for Coding" },
-    { id: "3JZ_D3ELwOQ", title: "Varanasi Morning Aura" },
+    { id: "3JZ_D3ELwOQ", title: "Varanasi Morning Aura" }
   ];
 
   return (
-    <div className="px-4 pb-20">
-      {" "}
-      {/* pb-20 taaki bottom nav ke peeche na chupe */}
+    <div className="px-4 pb-20"> {/* pb-20 taaki bottom nav ke peeche na chupe */}
       <div className="max-w-lg mx-auto space-y-4">
         <motion.h1
           className="font-display text-xl font-bold gradient-text pt-1 pb-2"
@@ -80,9 +74,7 @@ export default function MainFeed() {
 
         {error && (
           <div className="glass-card p-6 text-center">
-            <p className="text-muted-foreground text-sm">
-              Could not load posts. Check your Supabase table setup.
-            </p>
+            <p className="text-muted-foreground text-sm">Could not load posts. Check your Supabase table setup.</p>
           </div>
         )}
 
@@ -90,9 +82,7 @@ export default function MainFeed() {
           <div className="glass-card p-8 text-center">
             <p className="text-2xl mb-2">👋</p>
             <p className="font-semibold text-sm">No posts yet</p>
-            <p className="text-muted-foreground text-xs mt-1">
-              Be the first to share something!
-            </p>
+            <p className="text-muted-foreground text-xs mt-1">Be the first to share something!</p>
           </div>
         )}
 
