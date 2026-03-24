@@ -12,6 +12,7 @@ import {
   Bookmark,
   Zap,
   Flame,
+  Search, // 👈 New
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import FlicksTray from "@/components/layout/FlicksTray";
@@ -19,12 +20,16 @@ import ChatTray from "@/components/layout/ChatTray";
 import MainFeed from "@/components/feed/MainFeed";
 import ProfileSection from "@/components/profile/ProfileSection";
 import SettingsPanel from "@/components/settings/SettingsPanel";
+import SearchUsers from "@/components/SearchUsers"; // 👈 New
+import NotificationPanel from "@/components/NotificationPanel"; // 👈 New
 
 export default function Index() {
   const [flicksOpen, setFlicksOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false); // 👈 New
+  const [alertsOpen, setAlertsOpen] = useState(false); // 👈 New
 
   const [matchIdx, setMatchIdx] = useState(0);
   const petals = Array.from({ length: 15 });
@@ -61,12 +66,21 @@ export default function Index() {
         <h1 className="text-2xl font-black tracking-tighter text-blue-600 select-none italic">
           FACELOOK
         </h1>
-        <button
-          onClick={() => setSettingsOpen(true)}
-          className="p-2 hover:bg-green-100 rounded-full transition-all"
-        >
-          <Settings className="w-5 h-5 text-green-700" />
-        </button>
+        <div className="flex items-center gap-2">
+          {/* 🔥 SEARCH ICON ADDED TO HEADER */}
+          <button
+            onClick={() => setSearchOpen(true)}
+            className="p-2 hover:bg-green-100 rounded-full transition-all"
+          >
+            <Search className="w-5 h-5 text-green-700" />
+          </button>
+          <button
+            onClick={() => setSettingsOpen(true)}
+            className="p-2 hover:bg-green-100 rounded-full transition-all"
+          >
+            <Settings className="w-5 h-5 text-green-700" />
+          </button>
+        </div>
       </header>
 
       <div className="flex flex-1 overflow-hidden relative">
@@ -84,7 +98,7 @@ export default function Index() {
         {/* --- MAIN CONTENT AREA --- */}
         <main className="flex-1 overflow-y-auto no-scrollbar pb-32">
           <div className="max-w-[620px] mx-auto py-6 space-y-10">
-            {/* VIRAL ON FACELOOK (Wapas Add Kar Diya!) */}
+            {/* VIRAL ON FACELOOK */}
             <section className="px-4">
               <div className="flex items-center gap-2 mb-4">
                 <Flame className="w-5 h-5 text-orange-500 fill-orange-500" />
@@ -147,7 +161,7 @@ export default function Index() {
               </div>
             </section>
 
-            {/* VELVET RED MATRIMONY (Matchmaking Animated) */}
+            {/* VELVET RED MATRIMONY */}
             <section className="bg-[#2d0202] rounded-[3.5rem] shadow-2xl overflow-hidden border-b-[6px] border-red-900 relative min-h-[440px] mx-4">
               <div className="absolute inset-0 pointer-events-none z-10">
                 {petals.map((_, i) => (
@@ -199,7 +213,7 @@ export default function Index() {
               </div>
             </section>
 
-            {/* MAIN FEED (Now Direct on Background) */}
+            {/* MAIN FEED */}
             <div className="px-0">
               <MainFeed />
             </div>
@@ -241,7 +255,11 @@ export default function Index() {
         >
           <User className="w-8 h-8" />
         </div>
-        <button className="flex flex-col items-center gap-1">
+        {/* 🔔 ALERTS BUTTON ACTIVATED */}
+        <button
+          onClick={() => setAlertsOpen(true)}
+          className="flex flex-col items-center gap-1"
+        >
           <Bell className="w-6 h-6 text-green-900/40" />
           <span className="text-[7px] font-black uppercase text-green-900/40">
             Alerts
@@ -254,6 +272,64 @@ export default function Index() {
           </span>
         </button>
       </nav>
+
+      {/* FULL SCREEN SEARCH OVERLAY (NEW) */}
+      <AnimatePresence>
+        {searchOpen && (
+          <motion.div
+            initial={{ opacity: 0, scale: 1.1 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 1.1 }}
+            className="fixed inset-0 z-[250] bg-white/95 backdrop-blur-2xl flex flex-col p-6"
+          >
+            <div className="flex justify-end mb-4">
+              <button
+                onClick={() => setSearchOpen(false)}
+                className="p-2 bg-black/5 rounded-full"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="flex-1 max-w-md mx-auto w-full">
+              <h2 className="text-3xl font-black italic text-blue-600 mb-8 tracking-tighter uppercase">
+                Search Facelook
+              </h2>
+              <SearchUsers />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* FULL SCREEN ALERTS OVERLAY (NEW) */}
+      <AnimatePresence>
+        {alertsOpen && (
+          <motion.div
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            transition={{ type: "spring", damping: 25 }}
+            className="fixed inset-0 z-[250] bg-white flex flex-col"
+          >
+            <div className="h-16 bg-green-900 flex items-center justify-between px-6 text-white shrink-0">
+              <div className="flex items-center gap-2">
+                <Bell className="w-5 h-5 text-green-400" />
+                <h2 className="font-black tracking-[3px] uppercase text-sm">
+                  Notifications
+                </h2>
+              </div>
+              <button
+                onClick={() => setAlertsOpen(false)}
+                className="bg-white/20 p-2 rounded-full"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              <NotificationPanel />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* FULL SCREEN F-CHAT OVERLAY */}
       <AnimatePresence>
