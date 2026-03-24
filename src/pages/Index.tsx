@@ -29,7 +29,7 @@ import FriendListOverlay from "@/components/FriendListOverlay";
 export default function Index() {
   const { user } = useAuth();
   const [flicksOpen, setFlicksOpen] = useState(false);
-  const [chatOpen, setChatOpen] = useState(false); // Ye ab 'Vibe' ke liye hai
+  const [chatOpen, setChatOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -138,7 +138,7 @@ export default function Index() {
       </header>
 
       <div className="flex flex-1 overflow-hidden relative">
-        {/* --- FLICKS SIDE BUTTON (NEW DESIGN) --- */}
+        {/* --- FLICKS SIDE BUTTON --- */}
         <motion.div
           onClick={() => setFlicksOpen(true)}
           className="absolute left-0 top-1/2 -translate-y-1/2 z-[50] bg-black/10 backdrop-blur-md text-black/70 w-7 h-32 rounded-r-2xl flex items-center justify-center cursor-pointer border border-white/20 shadow-xl"
@@ -154,10 +154,11 @@ export default function Index() {
           </span>
         </motion.div>
 
-        <main className="flex-1 overflow-y-auto no-scrollbar pb-32">
+        {/* --- MAIN CONTENT AREA WITH SNAP SCROLLING --- */}
+        <main className="flex-1 overflow-y-auto no-scrollbar pb-32 snap-y snap-mandatory scroll-smooth">
           <div className="max-w-[620px] mx-auto py-6 space-y-10">
             {/* Viral Section */}
-            <section className="px-4">
+            <section className="px-4 snap-start">
               <div className="flex items-center gap-2 mb-4">
                 <Flame className="w-5 h-5 text-orange-500 fill-orange-500" />
                 <h3 className="text-[11px] font-black text-green-900 tracking-[3px] uppercase italic">
@@ -187,7 +188,7 @@ export default function Index() {
             </section>
 
             {/* Hook Requests */}
-            <section className="space-y-4 px-4">
+            <section className="space-y-4 px-4 snap-start">
               <h3 className="text-[11px] font-black text-green-800 tracking-[3px] uppercase px-1">
                 Hook Requests
               </h3>
@@ -218,7 +219,7 @@ export default function Index() {
             </section>
 
             {/* Matrimony */}
-            <section className="bg-[#2d0202] rounded-[3.5rem] shadow-2xl overflow-hidden border-b-[6px] border-red-900 relative min-h-[440px] mx-4">
+            <section className="bg-[#2d0202] rounded-[3.5rem] shadow-2xl overflow-hidden border-b-[6px] border-red-900 relative min-h-[440px] mx-4 snap-start">
               <div className="absolute inset-0 pointer-events-none z-10">
                 {petals.map((_, i) => (
                   <motion.div
@@ -269,13 +270,13 @@ export default function Index() {
               </div>
             </section>
 
-            <div className="px-0">
+            <div className="px-0 snap-start">
               <MainFeed />
             </div>
           </div>
         </main>
 
-        {/* --- VIBE SIDE BUTTON (NEW DESIGN) --- */}
+        {/* --- VIBE SIDE BUTTON --- */}
         <motion.div
           onClick={() => setChatOpen(true)}
           className="absolute right-0 top-1/2 -translate-y-1/2 z-[50] bg-blue-600/10 backdrop-blur-md text-blue-700/70 w-7 h-32 rounded-l-2xl flex items-center justify-center cursor-pointer border border-blue-200/20 shadow-xl"
