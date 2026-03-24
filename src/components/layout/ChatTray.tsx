@@ -20,6 +20,20 @@ import { formatDistanceToNow } from "date-fns";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 
+// --- AUDIO SYSTEM ---
+const playSound = (type: "send" | "receive" | "notif" | "delete") => {
+  const sounds = {
+    send: "https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3",
+    receive:
+      "https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3",
+    notif: "https://assets.mixkit.co/active_storage/sfx/2357/2357-preview.mp3",
+    delete: "https://www.soundjay.com/buttons/sounds/button-20.mp3",
+  };
+  const audio = new Audio(sounds[type]);
+  audio.volume = 0.3;
+  audio.play().catch(() => {}); // Browser block na kare isliye catch
+};
+
 // --- SMOKE/DHUWAN EFFECT ---
 const SmokeEffect = () => (
   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -88,7 +102,6 @@ const DeleteMenu = ({
   </AnimatePresence>
 );
 
-// --- STICKERS ---
 const FUNNY_STICKERS = [
   {
     url: "https://fonts.gstatic.com/s/e/notoemoji/latest/1f45e/512.gif",
@@ -116,7 +129,6 @@ const FUNNY_STICKERS = [
   },
 ];
 
-// --- NOTIFICATION ---
 const GlobalNotification = ({ msg, visible, onClose }: any) => (
   <AnimatePresence>
     {visible && (
@@ -143,7 +155,6 @@ const GlobalNotification = ({ msg, visible, onClose }: any) => (
   </AnimatePresence>
 );
 
-// --- TYPING INDICATOR ---
 const TypingIndicator = () => (
   <div className="flex gap-1.5 px-4 py-3 bg-white/50 backdrop-blur-md w-fit rounded-2xl rounded-bl-none border border-white/20 mb-4 shadow-sm">
     {[0, 1, 2].map((i) => (
@@ -157,7 +168,6 @@ const TypingIndicator = () => (
   </div>
 );
 
-// --- AVATAR ---
 function Avatar({ profile, size = 10 }: { profile: any; size?: number }) {
   const letter = profile?.full_name?.[0]?.toUpperCase() ?? "?";
   return (
@@ -173,7 +183,6 @@ function Avatar({ profile, size = 10 }: { profile: any; size?: number }) {
   );
 }
 
-// --- CHAT WINDOW ---
 function ChatView({
   conversation,
   onBack,
@@ -217,12 +226,13 @@ function ChatView({
         },
         (payload) => {
           if (payload.eventType === "INSERT") {
-            setMessages((prev) =>
-              prev.find((m) => m.id === payload.new.id)
-                ? prev
-                : [...prev, payload.new],
-            );
+            setMessages((prev) => {
+              if (prev.find((m) => m.id === payload.new.id)) return prev;
+              if (payload.new.sender_id !== user?.id) playSound("receive");
+              return [...prev, payload.new];
+            });
           } else if (payload.eventType === "DELETE") {
+            playSound("delete");
             setDeletingId(payload.old.id);
             setTimeout(() => {
               setMessages((prev) =>
@@ -265,6 +275,8 @@ function ChatView({
     if (!content.trim() || !user) return;
     if (!content.startsWith("http")) setText("");
 
+    playSound("send"); // Play send sound immediately
+
     const isSpamReplying =
       convStatus === "spam" && conversation.last_sender_id !== user.id;
 
@@ -286,7 +298,6 @@ function ChatView({
         last_sender_id: user.id,
       };
       if (isSpamReplying) updateObj.status = "normal";
-
       await supabase
         .from("conversations")
         .update(updateObj)
@@ -295,6 +306,7 @@ function ChatView({
   };
 
   const deleteForMe = (msgId: string) => {
+    playSound("delete");
     setDeletingId(msgId);
     setTimeout(() => {
       setMessages((prev) => prev.filter((m) => m.id !== msgId));
@@ -316,7 +328,6 @@ function ChatView({
         }}
       />
 
-      {/* HEADER */}
       <div className="flex items-center gap-3 p-4 bg-white/70 backdrop-blur-xl border-b border-white/20 sticky top-0 z-30 shadow-sm">
         <button
           onClick={onBack}
@@ -346,7 +357,6 @@ function ChatView({
         </div>
       </div>
 
-      {/* MESSAGES AREA */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
         {convStatus === "spam" && conversation.last_sender_id !== user?.id && (
           <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 p-5 rounded-[2.5rem] text-center mb-6 shadow-sm">
@@ -412,7 +422,6 @@ function ChatView({
         <div ref={bottomRef} />
       </div>
 
-      {/* INPUT AREA */}
       <div className="p-4 bg-white/60 backdrop-blur-2xl border-t border-white/20 relative">
         <AnimatePresence>
           {showStickers && (
@@ -471,7 +480,6 @@ function ChatView({
   );
 }
 
-// --- MAIN TRAY ---
 export default function ChatTray({
   isOpen,
   onClose,
@@ -532,6 +540,7 @@ export default function ChatTray({
         },
         (payload) => {
           if (selectedConvId !== payload.new.conversation_id) {
+            playSound("notif"); // Play notification sound
             setPopup({ visible: true, msg: payload.new });
             setTimeout(() => setPopup({ visible: false, msg: null }), 5000);
             loadAll();
@@ -564,7 +573,9 @@ export default function ChatTray({
   };
 
   const openConversation = async (profile: any) => {
-    let existing = conversations.find((c) => c.other_profile.id === profile.id);
+    let existing = conversations.find(
+      (c) => c.other_profile?.id === profile.id,
+    );
     if (existing) {
       setSelectedConvId(existing.id);
       setView("chat");
@@ -607,7 +618,6 @@ export default function ChatTray({
           >
             {view === "list" ? (
               <div className="flex flex-col h-full">
-                {/* LIST HEADER */}
                 <div className="p-8 bg-gradient-to-br from-blue-700 via-indigo-700 to-blue-900 text-white shadow-xl">
                   <div className="flex justify-between items-center mb-8">
                     <div className="flex items-center gap-2">
@@ -639,7 +649,6 @@ export default function ChatTray({
                   </div>
                 </div>
 
-                {/* LIST CONTENT */}
                 <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
                   {searchResults.map((p) => (
                     <div
@@ -655,7 +664,6 @@ export default function ChatTray({
                     </div>
                   ))}
 
-                  {/* SPAM SECTION */}
                   {conversations.some(
                     (c) => c.status === "spam" && c.last_sender_id !== user?.id,
                   ) && (
