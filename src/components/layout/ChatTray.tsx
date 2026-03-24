@@ -5,18 +5,16 @@ import {
   ArrowLeft,
   Loader2,
   CheckCheck,
-  Search,
-  MessageSquare,
   Smile,
   Bell,
   Trash2,
   UserX,
-  ShieldAlert,
-  Check,
-  Image as ImageIcon,
+  ImageIcon,
   Mic,
   StopCircle,
   Play,
+  Music,
+  MoreVertical,
   Volume2,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
@@ -24,7 +22,7 @@ import { formatDistanceToNow } from "date-fns";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 
-// --- AUDIO HELPERS ---
+// --- AUDIO SYSTEM ---
 const playSound = (type: "send" | "receive" | "notif" | "delete") => {
   const soundLinks = {
     send: "https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3",
@@ -34,45 +32,31 @@ const playSound = (type: "send" | "receive" | "notif" | "delete") => {
     delete: "https://www.soundjay.com/buttons/sounds/button-20.mp3",
   };
   const audio = new Audio(soundLinks[type]);
-  audio.volume = type === "notif" ? 1.0 : 0.6;
+  audio.volume = 0.4;
   audio.play().catch(() => {});
 };
 
-// --- SMOKE EFFECT ---
+// --- SMOKE EFFECT COMPONENT ---
 const SmokeEffect = () => (
   <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-50">
     {[...Array(12)].map((_, i) => (
       <motion.div
         key={i}
-        initial={{ scale: 0, opacity: 0.8 }}
+        initial={{ scale: 0, opacity: 1 }}
         animate={{
-          scale: [0, 2.5, 3],
-          opacity: [0.8, 0.4, 0],
-          x: (Math.random() - 0.5) * 120,
-          y: (Math.random() - 0.5) * 120,
+          scale: [0, 2, 4],
+          opacity: [1, 0.5, 0],
+          x: (Math.random() - 0.5) * 100,
+          y: (Math.random() - 0.5) * 100,
         }}
-        transition={{ duration: 0.7, ease: "easeOut" }}
-        className="absolute w-6 h-6 bg-gray-300/60 rounded-full blur-xl"
+        transition={{ duration: 0.7 }}
+        className="absolute w-6 h-6 bg-gray-300/50 rounded-full blur-xl"
       />
     ))}
   </div>
 );
 
-// --- TYPING INDICATOR ---
-const TypingIndicator = () => (
-  <div className="flex gap-1.5 px-4 py-3 bg-white/50 backdrop-blur-md w-fit rounded-2xl rounded-bl-none border border-white/20 mb-4 shadow-sm">
-    {[0, 1, 2].map((i) => (
-      <motion.div
-        key={i}
-        animate={{ y: [0, -6, 0], opacity: [0.4, 1, 0.4] }}
-        transition={{ duration: 0.8, repeat: Infinity, delay: i * 0.15 }}
-        className="w-2 h-2 bg-blue-500 rounded-full"
-      />
-    ))}
-  </div>
-);
-
-const FUNNY_STICKERS = [
+const STICKERS = [
   {
     url: "https://fonts.gstatic.com/s/e/notoemoji/latest/1f45e/512.gif",
     label: "Chappal",
@@ -91,53 +75,6 @@ const FUNNY_STICKERS = [
   },
 ];
 
-const DeleteMenu = ({
-  isOpen,
-  isOwner,
-  onCancel,
-  onDeleteMe,
-  onDeleteEveryone,
-}: any) => (
-  <AnimatePresence>
-    {isOpen && (
-      <div className="fixed inset-0 z-[3000] flex items-end justify-center bg-black/20 backdrop-blur-sm p-4">
-        <motion.div
-          initial={{ y: 100 }}
-          animate={{ y: 0 }}
-          exit={{ y: 100 }}
-          className="w-full max-w-sm bg-white rounded-[2.5rem] p-6 shadow-2xl border border-white/50"
-        >
-          <p className="text-center font-black uppercase text-[10px] tracking-[0.2em] text-gray-400 mb-6">
-            Message Options
-          </p>
-          <div className="space-y-3">
-            <button
-              onClick={onDeleteMe}
-              className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-2xl font-bold text-black"
-            >
-              Delete for me <Trash2 size={18} />
-            </button>
-            {isOwner && (
-              <button
-                onClick={onDeleteEveryone}
-                className="w-full flex items-center justify-between p-4 bg-red-50 text-red-600 rounded-2xl font-bold"
-              >
-                Delete for everyone <UserX size={18} />
-              </button>
-            )}
-            <button
-              onClick={onCancel}
-              className="w-full p-4 font-black uppercase text-xs text-gray-400"
-            >
-              Cancel
-            </button>
-          </div>
-        </motion.div>
-      </div>
-    )}
-  </AnimatePresence>
-);
-
 export default function ChatTray({
   isOpen,
   onClose,
@@ -155,11 +92,11 @@ export default function ChatTray({
   });
 
   useEffect(() => {
-    if (!user) return;
-    loadAll();
+    if (!user || !isOpen) return;
+    loadConversations();
 
-    const globalChannel = supabase
-      .channel("global_updates")
+    const channel = supabase
+      .channel("realtime_notifs")
       .on(
         "postgres_changes",
         {
@@ -173,60 +110,47 @@ export default function ChatTray({
             playSound("notif");
             setPopup({ visible: true, msg: payload.new });
             setTimeout(() => setPopup({ visible: false, msg: null }), 5000);
-            loadAll();
+            loadConversations();
           }
         },
       )
       .subscribe();
 
     return () => {
-      supabase.removeChannel(globalChannel);
+      supabase.removeChannel(channel);
     };
-  }, [user, selectedConvId]);
+  }, [user, isOpen, selectedConvId]);
 
-  const loadAll = async () => {
-    if (!user) return;
+  const loadConversations = async () => {
     const { data } = await supabase
       .from("conversations")
-      .select("*")
-      .or(`participant_1_id.eq.${user.id},participant_2_id.eq.${user.id}`)
+      .select(
+        `*, p1:participant_1_id(full_name, avatar_url), p2:participant_2_id(full_name, avatar_url)`,
+      )
+      .or(`participant_1_id.eq.${user?.id},participant_2_id.eq.${user?.id}`)
       .order("last_message_at", { ascending: false });
-
-    if (data) {
-      const enriched = await Promise.all(
-        data.map(async (c) => {
-          const otherId =
-            c.participant_1_id === user.id
-              ? c.participant_2_id
-              : c.participant_1_id;
-          const { data: prof } = await supabase
-            .from("profiles")
-            .select("*")
-            .eq("id", otherId)
-            .single();
-          return { ...c, other_profile: prof };
-        }),
-      );
-      setConversations(enriched);
-    }
+    if (data) setConversations(data);
   };
-
-  const activeConv = conversations.find((c) => c.id === selectedConvId);
 
   return (
     <div className="relative">
+      {/* POPUP NOTIFICATION */}
       <AnimatePresence>
         {popup.visible && (
           <motion.div
-            initial={{ y: -50, opacity: 0 }}
-            animate={{ y: 20, opacity: 1 }}
-            exit={{ y: -50, opacity: 0 }}
-            className="fixed top-4 left-1/2 -translate-x-1/2 z-[3000] w-[90%] max-w-[350px] bg-white p-4 rounded-3xl shadow-2xl border flex items-center gap-3"
+            initial={{ y: -100 }}
+            animate={{ y: 20 }}
+            exit={{ y: -100 }}
+            className="fixed top-5 left-1/2 -translate-x-1/2 z-[5000] w-[90%] max-w-[350px] bg-white p-4 rounded-3xl shadow-2xl border flex items-center gap-3 cursor-pointer"
+            onClick={() => {
+              setView("chat");
+              setSelectedConvId(popup.msg.conversation_id);
+            }}
           >
             <div className="bg-blue-600 p-2 rounded-2xl text-white">
               <Bell size={18} />
             </div>
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 truncate">
               <p className="text-[10px] font-black text-blue-600 uppercase">
                 New Message
               </p>
@@ -244,14 +168,14 @@ export default function ChatTray({
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
-            className="fixed inset-y-0 right-0 w-full sm:w-[420px] z-[1000] bg-[#f8faff] shadow-2xl flex flex-col border-l border-white/30"
+            className="fixed inset-y-0 right-0 w-full sm:w-[420px] z-[4000] bg-[#f8faff] shadow-2xl flex flex-col border-l border-white/20"
           >
             {view === "list" ? (
               <div className="flex flex-col h-full">
-                <div className="p-8 bg-gradient-to-br from-blue-700 to-indigo-900 text-white">
+                <div className="p-8 bg-gradient-to-br from-blue-600 to-indigo-800 text-white">
                   <div className="flex justify-between items-center mb-6">
                     <h2 className="text-2xl font-black italic tracking-tighter uppercase">
-                      Vibe-Chat
+                      Messages
                     </h2>
                     <button
                       onClick={onClose}
@@ -262,38 +186,42 @@ export default function ChatTray({
                   </div>
                 </div>
                 <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
-                  {conversations.map((conv) => (
-                    <div
-                      key={conv.id}
-                      onClick={() => {
-                        setSelectedConvId(conv.id);
-                        setView("chat");
-                      }}
-                      className="flex items-center gap-4 p-4 hover:bg-white rounded-[2.5rem] cursor-pointer mb-2 transition-all shadow-sm bg-white/50"
-                    >
-                      <Avatar profile={conv.other_profile} />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-black uppercase text-black">
-                          {conv.other_profile?.full_name}
-                        </p>
-                        <p className="text-[11px] text-gray-500 truncate">
-                          {conv.last_message}
-                        </p>
+                  {conversations.map((c) => {
+                    const other = c.participant_1_id === user?.id ? c.p2 : c.p1;
+                    return (
+                      <div
+                        key={c.id}
+                        onClick={() => {
+                          setSelectedConvId(c.id);
+                          setView("chat");
+                        }}
+                        className="flex items-center gap-4 p-4 hover:bg-white rounded-[2rem] cursor-pointer mb-2 transition-all shadow-sm bg-white/40"
+                      >
+                        <img
+                          src={other?.avatar_url}
+                          className="w-12 h-12 rounded-full object-cover border-2 border-blue-100"
+                        />
+                        <div className="flex-1 truncate">
+                          <p className="text-sm font-black uppercase text-black">
+                            {other?.full_name}
+                          </p>
+                          <p className="text-[11px] text-gray-500 truncate font-medium">
+                            {c.last_message}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             ) : (
-              activeConv && (
-                <ChatView
-                  conversation={activeConv}
-                  onBack={() => {
-                    setView("list");
-                    loadAll();
-                  }}
-                />
-              )
+              <ChatView
+                convId={selectedConvId!}
+                onBack={() => {
+                  setView("list");
+                  loadConversations();
+                }}
+              />
             )}
           </motion.div>
         )}
@@ -302,42 +230,32 @@ export default function ChatTray({
   );
 }
 
-function ChatView({ conversation, onBack }: any) {
+function ChatView({ convId, onBack }: { convId: string; onBack: () => void }) {
   const { user } = useAuth();
   const [messages, setMessages] = useState<any[]>([]);
   const [text, setText] = useState("");
   const [showStickers, setShowStickers] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
-  const [isTyping, setIsTyping] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [selectedMsg, setSelectedMsg] = useState<any>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-
+  const mediaRecorder = useRef<MediaRecorder | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const channelRef = useRef<any>(null);
 
   useEffect(() => {
     loadMessages();
-
-    // REALTIME FIX: Subscribe to both database changes AND broadcast
-    channelRef.current = supabase.channel(`chat_${conversation.id}`);
-
-    channelRef.current
+    const channel = supabase
+      .channel(`chat_${convId}`)
       .on(
         "postgres_changes",
         {
           event: "*",
           schema: "public",
           table: "messages",
-          filter: `conversation_id=eq.${conversation.id}`,
+          filter: `conversation_id=eq.${convId}`,
         },
         (p) => {
           if (p.eventType === "INSERT") {
-            setMessages((prev) => {
-              const exists = prev.find((m) => m.id === p.new.id);
-              if (exists) return prev;
-              return [...prev, p.new];
-            });
+            setMessages((prev) => [...prev, p.new]);
             if (p.new.sender_id !== user?.id) playSound("receive");
           }
           if (p.eventType === "DELETE") {
@@ -346,49 +264,43 @@ function ChatView({ conversation, onBack }: any) {
             setTimeout(() => {
               setMessages((prev) => prev.filter((m) => m.id !== p.old.id));
               setDeletingId(null);
-            }, 650);
+            }, 700);
           }
         },
       )
-      .on("broadcast", { event: "typing" }, ({ payload }) => {
-        if (payload.userId !== user?.id) {
-          setIsTyping(payload.typing);
-          setTimeout(() => setIsTyping(false), 3000);
-        }
-      })
       .subscribe();
-
     return () => {
-      supabase.removeChannel(channelRef.current);
+      supabase.removeChannel(channel);
     };
-  }, [conversation.id]);
+  }, [convId]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isTyping]);
+  }, [messages]);
 
   const loadMessages = async () => {
     const { data } = await supabase
       .from("messages")
       .select("*")
-      .eq("conversation_id", conversation.id)
+      .eq("conversation_id", convId)
       .order("created_at", { ascending: true });
     setMessages(data || []);
   };
 
-  const handleSend = async (
-    content: string,
-    type: "text" | "image" | "voice" | "sticker" = "text",
-  ) => {
+  const handleSend = async (content: string, type: any = "text") => {
     if (!content.trim() || !user) return;
-
+    const { data: conv } = await supabase
+      .from("conversations")
+      .select("*")
+      .eq("id", convId)
+      .single();
     const receiverId =
-      conversation.participant_1_id === user.id
-        ? conversation.participant_2_id
-        : conversation.participant_1_id;
+      conv.participant_1_id === user.id
+        ? conv.participant_2_id
+        : conv.participant_1_id;
 
     const { error } = await supabase.from("messages").insert({
-      conversation_id: conversation.id,
+      conversation_id: convId,
       sender_id: user.id,
       receiver_id: receiverId,
       content,
@@ -396,209 +308,211 @@ function ChatView({ conversation, onBack }: any) {
     });
 
     if (!error) {
-      playSound("send");
       setText("");
-      setShowStickers(false);
+      playSound("send");
       await supabase
         .from("conversations")
         .update({
           last_message: type === "text" ? content : `Sent a ${type}`,
-          last_message_at: new Date().toISOString(),
-          last_sender_id: user.id,
+          last_message_at: new Date(),
         })
-        .eq("id", conversation.id);
+        .eq("id", convId);
     }
   };
 
-  const deleteMessage = async (msg: any, everyone: boolean) => {
-    setDeletingId(msg.id);
-    playSound("delete");
-    if (everyone) {
-      await supabase.from("messages").delete().eq("id", msg.id);
-    } else {
-      setMessages((prev) => prev.filter((m) => m.id !== msg.id));
-    }
-    setSelectedMsg(null);
-  };
-
-  const uploadFile = async (file: File, folder: "images" | "voice") => {
+  const uploadFile = async (file: File, type: "image" | "voice" | "music") => {
     setUploading(true);
-    const fileName = `${Date.now()}_${file.name}`;
+    const path = `${type}s/${Date.now()}_${file.name}`;
     const { data } = await supabase.storage
       .from("chat-assets")
-      .upload(`${folder}/${fileName}`, file);
+      .upload(path, file);
     if (data) {
       const {
         data: { publicUrl },
       } = supabase.storage.from("chat-assets").getPublicUrl(data.path);
-      handleSend(publicUrl, folder === "images" ? "image" : "voice");
+      handleSend(publicUrl, type);
     }
     setUploading(false);
   };
 
+  const startRecording = async () => {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mediaRecorder.current = new MediaRecorder(stream);
+    const chunks: Blob[] = [];
+    mediaRecorder.current.ondataavailable = (e) => chunks.push(e.data);
+    mediaRecorder.current.onstop = () => {
+      const blob = new Blob(chunks, { type: "audio/ogg" });
+      uploadFile(new File([blob], "voice.ogg"), "voice");
+    };
+    mediaRecorder.current.start();
+    setIsRecording(true);
+  };
+
   return (
     <div className="flex flex-col h-full bg-[#f8faff] relative">
-      <DeleteMenu
-        isOpen={!!selectedMsg}
-        isOwner={selectedMsg?.sender_id === user?.id}
-        onCancel={() => setSelectedMsg(null)}
-        onDeleteMe={() => deleteMessage(selectedMsg, false)}
-        onDeleteEveryone={() => deleteMessage(selectedMsg, true)}
-      />
-
-      <div className="p-4 flex items-center justify-between border-b bg-white sticky top-0 z-20 shadow-sm">
+      {/* HEADER */}
+      <div className="p-4 border-b bg-white flex items-center justify-between sticky top-0 z-20">
         <div className="flex items-center gap-3">
-          <button onClick={onBack} className="text-black">
+          <button
+            onClick={onBack}
+            className="p-2 hover:bg-gray-100 rounded-full"
+          >
             <ArrowLeft size={20} />
           </button>
-          <Avatar profile={conversation.other_profile} />
-          <div>
-            <p className="font-black text-xs uppercase text-black tracking-widest">
-              {conversation.other_profile?.full_name}
-            </p>
-            <div className="flex items-center gap-1.5">
-              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-[9px] font-black text-gray-400 uppercase">
-                Online
-              </span>
-            </div>
-          </div>
+          <p className="font-black text-xs uppercase tracking-widest">
+            Active Chat
+          </p>
         </div>
       </div>
 
+      {/* MESSAGES AREA */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
-        <AnimatePresence mode="popLayout">
-          {messages.map((m) => (
-            <motion.div
-              key={m.id}
-              layout
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.5 }}
-              onClick={() => setSelectedMsg(m)}
-              className={`flex relative group ${m.sender_id === user?.id ? "justify-end" : "justify-start"}`}
+        {messages.map((m) => (
+          <motion.div
+            key={m.id}
+            layout
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className={`flex relative ${m.sender_id === user?.id ? "justify-end" : "justify-start"}`}
+          >
+            {deletingId === m.id && <SmokeEffect />}
+            <div
+              onContextMenu={(e) => {
+                e.preventDefault();
+                if (confirm("Delete for everyone?"))
+                  supabase.from("messages").delete().eq("id", m.id);
+              }}
+              className={`p-4 rounded-[1.8rem] max-w-[80%] shadow-sm ${m.sender_id === user?.id ? "bg-blue-600 text-white rounded-tr-none" : "bg-white text-black rounded-tl-none"}`}
             >
-              {deletingId === m.id && <SmokeEffect />}
-              <div
-                className={`p-4 rounded-[1.8rem] max-w-[80%] shadow-sm transition-all ${m.sender_id === user?.id ? "bg-blue-600 text-white rounded-tr-none" : "bg-white text-black rounded-tl-none border border-gray-100"}`}
-              >
-                {m.type === "image" && (
-                  <img src={m.content} className="w-48 rounded-2xl mb-2" />
-                )}
-                {m.type === "voice" && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      new Audio(m.content).play();
-                    }}
-                    className="flex items-center gap-3 bg-black/10 p-2 rounded-xl"
-                  >
-                    <Play size={16} />{" "}
-                    <div className="h-1 w-20 bg-current/20 rounded-full" />
-                  </button>
-                )}
-                {m.type === "text" && (
-                  <p className="text-[13px] font-semibold leading-relaxed">
-                    {m.content}
-                  </p>
-                )}
-                {m.type === "sticker" && (
-                  <img src={m.content} className="w-24 h-24" />
-                )}
-                <div className="flex items-center gap-1 mt-1 opacity-60 text-[8px] font-black justify-end uppercase">
-                  {formatDistanceToNow(new Date(m.created_at))}
-                  {m.sender_id === user?.id && <CheckCheck size={10} />}
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </AnimatePresence>
-        {isTyping && <TypingIndicator />}
+              {m.type === "text" && (
+                <p className="text-[13px] font-bold">{m.content}</p>
+              )}
+              {m.type === "image" && (
+                <img src={m.content} className="w-48 rounded-2xl" />
+              )}
+              {m.type === "sticker" && (
+                <img src={m.content} className="w-20 h-20" />
+              )}
+              {m.type === "voice" && (
+                <button
+                  onClick={() => new Audio(m.content).play()}
+                  className="flex items-center gap-2"
+                >
+                  <Play size={16} fill="white" /> Voice Msg
+                </button>
+              )}
+              {m.type === "music" && (
+                <button
+                  onClick={() => new Audio(m.content).play()}
+                  className="flex items-center gap-2 bg-black/10 p-2 rounded-xl"
+                >
+                  <Music size={16} /> MP3 File
+                </button>
+              )}
+              <p className="text-[8px] mt-1 opacity-50 text-right uppercase">
+                {formatDistanceToNow(new Date(m.created_at))} ago
+              </p>
+            </div>
+          </motion.div>
+        ))}
         <div ref={bottomRef} />
       </div>
 
-      <div className="p-4 bg-white border-t flex flex-col gap-2 shadow-[0_-4px_10px_rgba(0,0,0,0.03)]">
+      {/* INPUT PANEL */}
+      <div className="p-4 bg-white border-t flex flex-col gap-3">
         <AnimatePresence>
           {showStickers && (
             <motion.div
-              initial={{ y: 20, opacity: 0 }}
+              initial={{ y: 10, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 20, opacity: 0 }}
-              className="flex justify-around bg-gray-50 p-3 rounded-3xl mb-2 border border-gray-100"
+              exit={{ y: 10, opacity: 0 }}
+              className="flex justify-around bg-gray-50 p-3 rounded-2xl border mb-1"
             >
-              {FUNNY_STICKERS.map((s) => (
+              {STICKERS.map((s) => (
                 <img
                   key={s.label}
                   src={s.url}
-                  onClick={() => handleSend(s.url, "sticker")}
-                  className="w-12 h-12 cursor-pointer hover:scale-110 transition-transform"
+                  onClick={() => {
+                    handleSend(s.url, "sticker");
+                    setShowStickers(false);
+                  }}
+                  className="w-10 h-10 cursor-pointer hover:scale-110"
                 />
               ))}
             </motion.div>
           )}
         </AnimatePresence>
+
         <div className="flex items-center gap-2">
-          <label className="cursor-pointer p-2 hover:bg-gray-100 rounded-full">
-            <input
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) =>
-                e.target.files?.[0] && uploadFile(e.target.files[0], "images")
-              }
-            />
-            <ImageIcon size={20} className="text-gray-400" />
-          </label>
+          <input
+            type="file"
+            id="chat-img"
+            hidden
+            accept="image/*"
+            onChange={(e) =>
+              e.target.files?.[0] && uploadFile(e.target.files[0], "image")
+            }
+          />
+          <input
+            type="file"
+            id="chat-music"
+            hidden
+            accept="audio/mp3"
+            onChange={(e) =>
+              e.target.files?.[0] && uploadFile(e.target.files[0], "music")
+            }
+          />
+
+          <button
+            onClick={() => document.getElementById("chat-img")?.click()}
+            className="p-2 text-gray-400 hover:text-blue-600"
+          >
+            <ImageIcon size={20} />
+          </button>
+          <button
+            onClick={() => document.getElementById("chat-music")?.click()}
+            className="p-2 text-gray-400 hover:text-indigo-600"
+          >
+            <Music size={20} />
+          </button>
           <button
             onClick={() => setShowStickers(!showStickers)}
-            className={`p-2 rounded-full ${showStickers ? "bg-blue-100 text-blue-600" : "text-gray-400"}`}
+            className="p-2 text-gray-400 hover:text-yellow-500"
           >
             <Smile size={20} />
           </button>
+
           <input
-            className="flex-1 bg-gray-100 rounded-full px-4 py-2.5 text-sm outline-none font-bold text-black"
-            placeholder="Write something..."
+            className="flex-1 bg-gray-100 rounded-full px-4 py-2.5 text-sm font-bold outline-none"
+            placeholder="Type a message..."
             value={text}
-            onChange={(e) => {
-              setText(e.target.value);
-              channelRef.current.send({
-                type: "broadcast",
-                event: "typing",
-                payload: { userId: user?.id, typing: true },
-              });
-            }}
+            onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSend(text)}
           />
-          {text.length > 0 ? (
+
+          {text.trim() ? (
             <button
               onClick={() => handleSend(text)}
-              className="bg-blue-600 p-3 rounded-full text-white shadow-lg"
+              className="bg-blue-600 p-3 rounded-full text-white"
             >
               <Send size={18} />
             </button>
           ) : (
-            <button className="bg-gray-100 p-3 rounded-full text-gray-500">
-              <Mic size={20} />
+            <button
+              onMouseDown={startRecording}
+              onMouseUp={() => mediaRecorder.current?.stop()}
+              className={`p-3 rounded-full ${isRecording ? "bg-red-500 animate-pulse text-white" : "bg-gray-100 text-gray-500"}`}
+            >
+              {isRecording ? <StopCircle size={20} /> : <Mic size={20} />}
             </button>
           )}
         </div>
       </div>
-      {uploading && (
-        <div className="absolute inset-0 bg-white/50 flex items-center justify-center z-50">
-          <Loader2 className="animate-spin text-blue-600" />
-        </div>
-      )}
-    </div>
-  );
-}
 
-function Avatar({ profile }: any) {
-  return (
-    <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-700 flex items-center justify-center text-white font-black text-xs border-2 border-white shadow-sm overflow-hidden shrink-0">
-      {profile?.avatar_url ? (
-        <img src={profile.avatar_url} className="w-full h-full object-cover" />
-      ) : (
-        profile?.full_name?.[0]
+      {uploading && (
+        <div className="absolute inset-0 bg-white/60 flex items-center justify-center z-50">
+          <Loader2 className="animate-spin text-blue-600" size={30} />
+        </div>
       )}
     </div>
   );
