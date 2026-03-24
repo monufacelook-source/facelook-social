@@ -43,7 +43,8 @@ export default function CreatePost() {
     if (!user) return;
 
     setSubmitting(true);
-    let image_url: string | null = null;
+    // ✅ Change 1: Variable ka naam media_url rakha hai clarity ke liye
+    let media_url: string | null = null;
 
     if (imageFile) {
       const ext = imageFile.name.split(".").pop();
@@ -65,13 +66,16 @@ export default function CreatePost() {
       const { data: urlData } = supabase.storage
         .from("posts")
         .getPublicUrl(path);
-      image_url = urlData.publicUrl;
+
+      // ✅ Change 2: URL ko naye variable mein store kiya
+      media_url = urlData.publicUrl;
     }
 
+    // ✅ Change 3: Yahan database column 'media_url' use kiya hai taaki Schema Error na aaye
     const { error } = await supabase.from("posts").insert({
       user_id: user.id,
       content: content.trim(),
-      image_url,
+      media_url: media_url, // 'image_url' ki jagah 'media_url' kar diya
     });
 
     setSubmitting(false);
