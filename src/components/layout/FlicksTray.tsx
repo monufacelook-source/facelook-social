@@ -17,7 +17,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
-import FlicksTray from "@/components/layout/FlicksTray"; // 👈 Flicks Connected
+import FlicksTray from "@/components/layout/FlicksTray";
 import ChatTray from "@/components/layout/ChatTray";
 import MainFeed from "@/components/feed/MainFeed";
 import ProfileSection from "@/components/profile/ProfileSection";
@@ -28,7 +28,7 @@ import FriendListOverlay from "@/components/FriendListOverlay";
 
 export default function Index() {
   const { user } = useAuth();
-  const [flicksOpen, setFlicksOpen] = useState(false); // 👈 State for Flicks
+  const [flicksOpen, setFlicksOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -138,21 +138,27 @@ export default function Index() {
       </header>
 
       <div className="flex flex-1 overflow-hidden relative">
-        {/* DVD FLICKS BUTTON - LEFT SIDE */}
+        {/* --- FLICKS SIDE BUTTON --- */}
         <motion.div
           onClick={() => setFlicksOpen(true)}
-          className="absolute left-0 top-1/2 -translate-y-1/2 z-[50] bg-black text-white w-9 h-40 rounded-r-2xl flex items-center justify-center cursor-pointer shadow-2xl border border-white/10"
-          whileHover={{ width: "45px" }}
+          className="absolute left-0 top-1/2 -translate-y-1/2 z-[50] bg-black/10 backdrop-blur-md text-black/70 w-7 h-32 rounded-r-2xl flex items-center justify-center cursor-pointer border border-white/20 shadow-xl"
+          whileHover={{
+            width: "35px",
+            backgroundColor: "rgba(0,0,0,0.2)",
+            color: "#000",
+          }}
+          whileTap={{ scale: 0.95 }}
         >
-          <span className="uppercase font-black text-[10px] tracking-[2px] [writing-mode:vertical-rl] rotate-180 opacity-70">
-            FLICKS DVD
+          <span className="uppercase font-black text-[9px] tracking-[2px] [writing-mode:vertical-rl] rotate-180">
+            FLICKS 📀
           </span>
         </motion.div>
 
-        <main className="flex-1 overflow-y-auto no-scrollbar pb-32">
+        {/* --- MAIN CONTENT AREA WITH SNAP SCROLLING --- */}
+        <main className="flex-1 overflow-y-auto no-scrollbar pb-32 snap-y snap-mandatory scroll-smooth">
           <div className="max-w-[620px] mx-auto py-6 space-y-10">
             {/* Viral Section */}
-            <section className="px-4">
+            <section className="px-4 snap-start">
               <div className="flex items-center gap-2 mb-4">
                 <Flame className="w-5 h-5 text-orange-500 fill-orange-500" />
                 <h3 className="text-[11px] font-black text-green-900 tracking-[3px] uppercase italic">
@@ -182,7 +188,7 @@ export default function Index() {
             </section>
 
             {/* Hook Requests */}
-            <section className="space-y-4 px-4">
+            <section className="space-y-4 px-4 snap-start">
               <h3 className="text-[11px] font-black text-green-800 tracking-[3px] uppercase px-1">
                 Hook Requests
               </h3>
@@ -213,7 +219,7 @@ export default function Index() {
             </section>
 
             {/* Matrimony */}
-            <section className="bg-[#2d0202] rounded-[3.5rem] shadow-2xl overflow-hidden border-b-[6px] border-red-900 relative min-h-[440px] mx-4">
+            <section className="bg-[#2d0202] rounded-[3.5rem] shadow-2xl overflow-hidden border-b-[6px] border-red-900 relative min-h-[440px] mx-4 snap-start">
               <div className="absolute inset-0 pointer-events-none z-10">
                 {petals.map((_, i) => (
                   <motion.div
@@ -264,20 +270,25 @@ export default function Index() {
               </div>
             </section>
 
-            <div className="px-0">
+            <div className="px-0 snap-start">
               <MainFeed />
             </div>
           </div>
         </main>
 
-        {/* F-CHAT BUTTON - RIGHT SIDE */}
+        {/* --- VIBE SIDE BUTTON --- */}
         <motion.div
           onClick={() => setChatOpen(true)}
-          className="absolute right-0 top-1/2 -translate-y-1/2 z-[50] bg-blue-600 text-white w-9 h-40 rounded-l-2xl flex items-center justify-center cursor-pointer shadow-2xl"
-          whileHover={{ width: "45px" }}
+          className="absolute right-0 top-1/2 -translate-y-1/2 z-[50] bg-blue-600/10 backdrop-blur-md text-blue-700/70 w-7 h-32 rounded-l-2xl flex items-center justify-center cursor-pointer border border-blue-200/20 shadow-xl"
+          whileHover={{
+            width: "35px",
+            backgroundColor: "rgba(37, 99, 235, 0.2)",
+            color: "#2563eb",
+          }}
+          whileTap={{ scale: 0.95 }}
         >
-          <span className="uppercase font-black text-[10px] tracking-[3px] [writing-mode:vertical-rl] rotate-0 text-blue-100">
-            F-CHAT 🩴
+          <span className="uppercase font-black text-[9px] tracking-[3px] [writing-mode:vertical-rl]">
+            VIBE ⚡
           </span>
         </motion.div>
       </div>
@@ -285,7 +296,7 @@ export default function Index() {
       {/* --- BOTTOM NAV --- */}
       <nav className="h-20 bg-white/80 backdrop-blur-lg border-t border-green-200 fixed bottom-0 left-0 right-0 z-[60] flex items-center justify-around">
         <button
-          onClick={() => setFlicksOpen(true)} // 👈 Open Flicks from Nav
+          onClick={() => setFlicksOpen(true)}
           className="flex flex-col items-center gap-1 group"
         >
           <Film
@@ -310,7 +321,6 @@ export default function Index() {
           <User className="w-8 h-8" />
         </div>
 
-        {/* 🔔 ALERTS WITH BADGE COUNT */}
         <button
           onClick={() => {
             setAlertsOpen(true);
@@ -341,12 +351,10 @@ export default function Index() {
         </button>
       </nav>
 
-      {/* --- ALL OVERLAYS (FLICKS, CHAT, ETC.) --- */}
+      {/* --- OVERLAYS --- */}
 
-      {/* 📀 FLICKS OVERLAY (NEW) */}
       <FlicksTray isOpen={flicksOpen} onClose={() => setFlicksOpen(false)} />
 
-      {/* SEARCH OVERLAY */}
       <AnimatePresence>
         {searchOpen && (
           <motion.div
@@ -373,7 +381,6 @@ export default function Index() {
         )}
       </AnimatePresence>
 
-      {/* ALERTS OVERLAY */}
       <AnimatePresence>
         {alertsOpen && (
           <motion.div
@@ -403,7 +410,6 @@ export default function Index() {
         )}
       </AnimatePresence>
 
-      {/* CHAT OVERLAY */}
       <AnimatePresence>
         {chatOpen && (
           <motion.div
@@ -412,13 +418,13 @@ export default function Index() {
             exit={{ x: "100%" }}
             className="fixed inset-0 z-[200] bg-white flex flex-col"
           >
-            <div className="h-16 bg-blue-600 flex items-center justify-between px-6 text-white shrink-0">
+            <div className="h-16 bg-blue-600 flex items-center justify-between px-6 text-white shrink-0 shadow-lg">
               <h2 className="font-black tracking-[5px] uppercase text-sm italic">
-                F-CHAT 🩴
+                VIBE ⚡
               </h2>
               <button
                 onClick={() => setChatOpen(false)}
-                className="bg-white/20 p-2 rounded-full"
+                className="bg-white/20 p-2 rounded-full hover:bg-white/30 transition-colors"
               >
                 <X className="w-6 h-6" />
               </button>
@@ -430,7 +436,6 @@ export default function Index() {
         )}
       </AnimatePresence>
 
-      {/* SETTINGS & PROFILE */}
       <AnimatePresence>
         {settingsOpen && (
           <div className="fixed inset-0 z-[210]">
@@ -461,7 +466,6 @@ export default function Index() {
         {profileOpen && <ProfileSection onBack={() => setProfileOpen(false)} />}
       </AnimatePresence>
 
-      {/* FRIEND MANAGEMENT */}
       <AnimatePresence>
         {friendsListOpen && (
           <motion.div
