@@ -226,11 +226,11 @@ export default function PostCard({ post, index }: PostCardProps) {
           <p className="px-4 pb-3 text-sm leading-relaxed">{post.content}</p>
         )}
 
-        {/* Image */}
-        {post.image_url && (
+        {/* Image - FIXED: Now checks both image_url and media_url */}
+        {(post.image_url || post.media_url) && (
           <div className="relative overflow-hidden">
             <img
-              src={post.image_url}
+              src={post.image_url || post.media_url}
               alt=""
               className="w-full aspect-[3/2] object-cover"
             />
