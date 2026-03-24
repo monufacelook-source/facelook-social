@@ -6,60 +6,112 @@ export default function Index() {
       style={{
         height: "100vh",
         width: "100vw",
-        backgroundColor: "#2563eb", // Blue color
+        backgroundColor: "#f0f2f5",
         display: "flex",
         flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        color: "white",
         fontFamily: "sans-serif",
       }}
     >
-      <h1
-        style={{ fontSize: "3rem", fontWeight: "bold", marginBottom: "10px" }}
-      >
-        FACELOOK IS ALIVE! 🚀
-      </h1>
-      <p style={{ fontSize: "1.2rem", opacity: 0.8 }}>
-        Agar aapko ye screen dikh rahi hai, toh iska matlab hai ki:
-      </p>
-      <ul style={{ marginTop: "20px", textAlign: "left", lineHeight: "2" }}>
-        <li>✅ React sahi se kaam kar raha hai.</li>
-        <li>✅ Replit ka server chal raha hai.</li>
-        <li>❌ Problem aapke purane Database ya Auth logic mein thi.</li>
-      </ul>
-
-      <button
-        onClick={() => window.location.reload()}
+      {/* HEADER */}
+      <header
         style={{
-          marginTop: "30px",
-          padding: "10px 20px",
+          height: "60px",
           backgroundColor: "white",
-          color: "#2563eb",
-          border: "none",
-          borderRadius: "8px",
-          fontWeight: "bold",
-          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          padding: "0 20px",
+          boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+          justifyContent: "space-between",
         }}
       >
-        Refresh Page
-      </button>
+        <h1
+          style={{
+            color: "#1877f2",
+            fontWeight: "black",
+            fontSize: "24px",
+            fontStyle: "italic",
+          }}
+        >
+          FACELOOK
+        </h1>
+        <div style={{ display: "flex", gap: "10px" }}>
+          <div
+            style={{
+              width: "35px",
+              height: "35px",
+              borderRadius: "50%",
+              backgroundColor: "#ddd",
+            }}
+          ></div>
+          <div
+            style={{
+              width: "35px",
+              height: "35px",
+              borderRadius: "50%",
+              backgroundColor: "#ddd",
+            }}
+          ></div>
+        </div>
+      </header>
 
-      <div
+      {/* MAIN CONTENT */}
+      <main
         style={{
-          marginTop: "40px",
-          border: "2px dashed white",
+          flex: 1,
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
           padding: "20px",
-          borderRadius: "15px",
         }}
       >
-        <p>Testing Image from Unsplash:</p>
-        <img
-          src="https://images.unsplash.com/photo-1614850523296-d8c1af93d400?w=400"
-          alt="Success"
-          style={{ width: "300px", borderRadius: "10px", marginTop: "10px" }}
-        />
-      </div>
+        <div
+          style={{
+            backgroundColor: "#1877f2",
+            padding: "40px",
+            borderRadius: "20px",
+            color: "white",
+            textAlign: "center",
+            boxShadow: "0 10px 30px rgba(24, 119, 242, 0.3)",
+            maxWidth: "400px",
+          }}
+        >
+          <h2 style={{ fontSize: "28px", marginBottom: "15px" }}>
+            SITE IS READY! 🚀
+          </h2>
+          <p style={{ opacity: 0.9, lineHeight: "1.6" }}>
+            Bhai, agar tujhe ye dikh raha hai toh matlab tera **Replit** aur
+            **Vite** ekdum sahi kaam kar rahe hain.
+          </p>
+          <div
+            style={{
+              marginTop: "20px",
+              background: "rgba(255,255,255,0.1)",
+              padding: "15px",
+              borderRadius: "10px",
+            }}
+          >
+            <p style={{ fontSize: "14px" }}>
+              Ab hum ek-ek karke tere purane Chat aur Profile components wapas
+              la sakte hain.
+            </p>
+          </div>
+          <button
+            onClick={() => window.location.reload()}
+            style={{
+              marginTop: "25px",
+              padding: "12px 24px",
+              border: "none",
+              borderRadius: "10px",
+              backgroundColor: "white",
+              color: "#1877f2",
+              fontWeight: "bold",
+              cursor: "pointer",
+            }}
+          >
+            Refresh Test
+          </button>
+        </div>
+      </main>
     </div>
   );
 }
