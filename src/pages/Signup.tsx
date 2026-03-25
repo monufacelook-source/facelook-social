@@ -174,6 +174,10 @@ export default function Signup() {
           </Link>
         </p>
       </motion.div>
+
+      <p className="mt-6 text-center text-[10px] font-black uppercase tracking-[0.25em] text-purple-400/50 relative z-10">
+        ⚡ POWERED BY FACELOOK 10.07
+      </p>
     </div>
   );
 }

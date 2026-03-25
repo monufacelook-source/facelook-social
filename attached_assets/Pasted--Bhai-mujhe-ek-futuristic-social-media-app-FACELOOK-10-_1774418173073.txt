@@ -1,0 +1,49 @@
+"Bhai, mujhe ek futuristic social media app 'FACELOOK 10.07' banana hai. Iska design Premium White base aur Deep Dark Purple accents par hoga. Koi traditional card-style boxes use mat karna, poora UI edge-to-edge aur immersive hona chahiye.
+
+1. Header & Search (Top):
+Left: Facelook Logo (Zap icon) aur 'FACELOOK' Bold Italic text.
+
+Center: Ek clean, glassmorphic Search Bar doston ko dhundhne ke liye.
+
+Right: Notification Bell aur Settings Gear ek saath rakho.
+
+Settings Menu: Isme Facebook ki tarah: Profile Lock, Hide Profile, Language, Password Reset, Privacy Policy, aur Help/Support ke options dalo.
+
+2. Dual Wall Trays (Middle):
+Left Wall Middle: FlicksTray button (DVD tray style). Click karne par ye Full Screen par swipe ho aur video gallery/movies dikhaye.
+
+Right Wall Middle: FaceTray button. Click karne par ye Full Screen 'User Hub' khule.
+
+3. FaceTray: The User Data Hub:
+Profile: Profile Picture (Edit option), Username, aur Bio (Edit option) dalo.
+
+Counters (Active Links): Char counters rakho: POSTS, FRIENDS, HOOKS, LIKES.
+
+Logic: Agar data nahi hai toh mandatory 0 dikhao.
+
+Action: FRIENDS par tap karte hi Full Friend List khule. HOOKS (M-Heart matches) par tap karte hi original hooks list khule.
+
+Analytics: Ek premium section dalo 'FACELOOK TIME' jo user ka total spend kiya hua watch time (Hours/Mins) dikhaye.
+
+Gallery: Niche user ki saari posts (Photos/Videos) ka 3-column grid dalo.
+
+4. Main Feed & Interactions:
+Background: TikTok-style full-screen vertical video feed.
+
+Reels Buttons (Right Overlay): Heart (Like), Chappal (Dislike), Share, aur Comment.
+
+Vibe Hub (Bottom Right): Ek floating Glowing Mic button. Tap karne par Friend List aur Chat Window khule, jisme Background Theme/Wallpaper change karne ka option ho.
+
+5. Bottom Navigation (6 Buttons):
+Layout: Task | M-Heart (Matrimony) | POST (+) | Groups | Snapy | Fun Section.
+
+Post (+): Is par click karne par mobile gallery se video/photo upload karne ka option aaye.
+
+6. Technical Requirements:
+Theme: White background with Deep Dark Purple solid buttons and icons.
+
+Responsiveness: 100% Mobile Responsive (Tailwind CSS).
+
+Animations: Trays aur menus ke liye smooth Framer Motion transitions use karo.
+
+Footer: Login/Signup page ke bottom mein 'POWERED BY FACELOOK 10.07' dalo."

@@ -1,0 +1,61 @@
+"Bhai, mujhe ek futuristic social media app 'FACELOOK 10.07' banana hai. Design Premium White base aur Deep Dark Purple accents par hoga. Edge-to-edge immersive UI chahiye.
+
+1. Main Screen (The Feed):
+Background: Full-screen vertical video feed (TikTok style). Jo bhi user post ya reels karega, wo yahan Main Screen par dikhegi.
+
+Hooks Integration: Har reel/post ke niche user ka 'Hooks' status (vibe/catchphrase) mandatory dikhna chahiye.
+
+Interactions: Right side overlay mein Heart (Like), Chappal (Dislike), Share, aur Comment icons honge.
+
+2. Header & Search (Top):
+Left: Facelook Logo (Zap) + 'FACELOOK' Bold Italic.
+
+Center: Glassmorphic Search Bar.
+
+Right: Notification Bell aur Settings Gear.
+
+Settings: Profile Lock, Hide Profile, Language, Password Reset, Privacy Policy, aur Help/Support.
+
+3. Dual Wall Trays (Side Transitions):
+Left Wall Middle: FlicksTray button (DVD tray style). Full-screen video gallery/movies ke liye.
+
+Right Wall Middle: FaceTray button. Full-screen 'User Hub' ke liye.
+
+4. FaceTray: The Complete User Hub:
+Profile: Profile Pic, Username, aur Bio (sab Edit features ke sath).
+
+Data Counters (Active Links):
+
+POSTS: Total posts (Nahi toh 0).
+
+FRIENDS: Tap karne par Friend List khule.
+
+HOOKS: Tap karne par user ke Original Hooks dikhaye.
+
+M-HEART: Tap karne par user ke M-Heart Friends/Matches dikhaye.
+
+LIKES: Total likes count.
+
+Analytics: 'FACELOOK TIME' section (Total Watch Time in Hours/Mins).
+
+Gallery: User ki purani posts ka 3-column grid.
+
+5. Bottom Navigation (Horizontal Scroll Menu):
+Design: Mobile responsive scrollable bar taaki 6 buttons bheed na lagun.
+
+Buttons: 1. Task (Challenges)
+2. M-Heart (Pure Matrimony/Shaadi.com style section)
+3. POST (+) (Gallery upload trigger)
+4. Groups (Tap karne par Friend List dikhe group banane ke liye. User Facebook ki tarah public/private groups bana sake, log join ho sakein admin approval se).
+5. Snapy (Quick Camera)
+6. Fun Section (Games/Extra)
+
+6. Vibe & Chat:
+Bottom-right mein Floating Mic button. Tap karne par Search, Friend List aur Chat Window khule jisme Background Wallpaper change karne ka option ho.
+
+7. Technical Specs:
+Theme: Pure White background, Deep Dark Purple accents.
+
+Animations: Framer Motion for trays and scroll menu.
+
+Footer: Login/Signup page ke niche 'POWERED BY FACELOOK 10.07' dalo."
